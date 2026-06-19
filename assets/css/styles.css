@@ -18,6 +18,12 @@
   box-sizing: border-box;
 }
 
+/* hidden 屬性一律隱藏：避免元件自身的 display 規則（例如 .admin-login{display:grid}）
+   蓋掉 hidden，導致登入後登入框仍顯示、或分頁／視窗無法正確隱藏。 */
+[hidden] {
+  display: none !important;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -1355,4 +1361,135 @@ dd {
   .footer-inner {
     grid-template-columns: 1fr;
   }
+}
+
+/* ===================== ROK 後台管理系統 system.html ===================== */
+.system-shell { max-width: 1280px; margin: 0 auto; padding: 22px; }
+
+/* 深色頂部標題列（企業後台、科技感） */
+.sys-appbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: var(--dark); color: #fff;
+  border-radius: 12px; padding: 16px 20px;
+  box-shadow: var(--shadow);
+}
+.sys-appbar .brand { color: #fff; }
+.sys-appbar .brand-mark { background: var(--cyan); color: #fff; }
+/* 深色頂列上的按鈕要改成淺色文字／邊框，避免深色文字在黑底上看不見 */
+.sys-appbar .btn.ghost { color: #fff; border-color: rgba(255, 255, 255, 0.4); background: transparent; }
+.sys-appbar .btn.ghost:hover { background: rgba(255, 255, 255, 0.12); }
+.sys-appbar .btn.primary { border-color: rgba(255, 255, 255, 0.22); }
+.sys-title { display: flex; flex-direction: column; line-height: 1.12; }
+.sys-title strong { font-size: 1.2rem; letter-spacing: 0.02em; }
+.sys-title span { font-size: 0.76rem; color: rgba(255, 255, 255, 0.6); }
+
+/* 分頁切換 */
+.sys-tabs {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin: 16px 0;
+  background: #11141a; border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px; padding: 6px;
+}
+.sys-tab {
+  flex: 1 1 auto; min-width: 140px;
+  border: 0; cursor: pointer;
+  background: transparent; color: rgba(255, 255, 255, 0.72);
+  font-weight: 800; font-size: 0.98rem;
+  padding: 12px 16px; border-radius: 8px;
+}
+.sys-tab:hover { color: #fff; background: rgba(255, 255, 255, 0.06); }
+.sys-tab.is-active { background: var(--cyan); color: #fff; }
+
+.sys-panel[hidden] { display: none; }
+
+/* 摘要卡（沿用 order-stats 視覺，但卡數可變） */
+.sys-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 16px; }
+.sys-summary article { border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 18px; }
+.sys-summary span { display: block; color: var(--muted); font-weight: 800; }
+.sys-summary strong { display: block; margin-top: 6px; font-size: 1.6rem; }
+.sys-summary strong.alert { color: var(--rose); }
+
+/* 面板工具列 */
+.sys-toolbar {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: #fff; padding: 14px; margin-bottom: 16px;
+}
+.sys-toolbar .grow { flex: 1 1 180px; }
+.sys-toolbar label { display: grid; gap: 4px; font-size: 0.82rem; font-weight: 800; color: var(--muted); }
+.sys-toolbar input[type="search"], .sys-toolbar select {
+  min-height: 42px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: #fff; font: inherit; width: 100%;
+}
+.sys-toolbar .spacer { flex: 1 1 auto; }
+.sys-sync-time { color: var(--muted); font-size: 0.82rem; font-weight: 700; align-self: center; }
+
+/* 資料表 */
+.sys-table-wrap { border: 1px solid var(--line); border-radius: 8px; background: #fff; overflow: auto; }
+.sys-table { width: 100%; border-collapse: collapse; min-width: 760px; font-size: 0.92rem; }
+.sys-table thead th {
+  position: sticky; top: 0;
+  background: var(--dark); color: #fff;
+  text-align: left; font-weight: 800; white-space: nowrap;
+  padding: 12px 14px;
+}
+.sys-table tbody td { padding: 11px 14px; border-top: 1px solid var(--line); vertical-align: middle; }
+.sys-table tbody tr:hover { background: var(--soft); }
+.sys-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* 員工資料不完整：整列紅色醒目 */
+.sys-table tbody tr.is-incomplete { background: #fdecee; }
+.sys-table tbody tr.is-incomplete:hover { background: #fbe0e4; }
+.sys-table tbody tr.is-incomplete td:first-child { box-shadow: inset 4px 0 0 var(--rose); }
+
+/* 狀態標籤 */
+.tag { display: inline-flex; align-items: center; gap: 5px; min-height: 24px; padding: 3px 10px; border-radius: 999px; font-size: 0.76rem; font-weight: 800; white-space: nowrap; }
+.tag.ok { background: #e8f5ef; color: #116034; }
+.tag.warn { background: #fef3e2; color: #92560b; }
+.tag.danger { background: #fae8ea; color: #9f1239; }
+.tag.muted { background: var(--soft); color: #3b424a; }
+.tag.founder { background: #efe9fd; color: #5b21b6; }
+
+.sys-empty { padding: 40px 18px; text-align: center; color: var(--muted); }
+.btn.tiny { min-height: 34px; padding: 6px 12px; font-size: 0.82rem; }
+
+/* Modal 懸浮視窗 */
+.sys-modal { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 20px; }
+.sys-modal[hidden] { display: none; }
+.sys-modal-overlay { position: absolute; inset: 0; background: rgba(10, 12, 16, 0.6); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.sys-modal-card {
+  position: relative; z-index: 1;
+  width: min(540px, 100%); max-height: 88vh; overflow: auto;
+  background: #fff; border-radius: 14px; box-shadow: var(--shadow); padding: 22px;
+}
+.sys-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.sys-modal-head h3 { font-size: 1.3rem; }
+.sys-modal-head p { color: var(--muted); font-size: 0.86rem; margin-top: 4px; }
+.sys-modal-close { border: 0; background: var(--soft); width: 36px; height: 36px; border-radius: 8px; font-size: 1.2rem; cursor: pointer; line-height: 1; flex: none; }
+.sys-form { display: grid; gap: 12px; }
+.sys-form.two { grid-template-columns: 1fr 1fr; }
+.sys-field { display: grid; gap: 5px; }
+.sys-field.full, .sys-form .full { grid-column: 1 / -1; }
+.sys-field label { font-size: 0.82rem; font-weight: 800; color: var(--muted); }
+.sys-field input, .sys-field select {
+  min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: #fff; font: inherit; width: 100%;
+}
+.sys-modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+.sys-hint { font-size: 0.8rem; color: var(--muted); }
+
+/* Toast 樣式提示（取代瀏覽器原生 alert） */
+.sys-toast-wrap { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 80; display: grid; gap: 8px; width: min(460px, calc(100% - 32px)); }
+.sys-toast {
+  background: var(--dark); color: #fff; border-radius: 10px; padding: 13px 16px;
+  box-shadow: var(--shadow); font-weight: 700; display: flex; align-items: center; gap: 10px;
+  animation: sys-toast-in 0.2s ease;
+}
+.sys-toast.warn { background: #9f1239; }
+.sys-toast.ok { background: #15803d; }
+@keyframes sys-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 720px) {
+  .system-shell { padding: 14px; }
+  .sys-appbar { flex-direction: column; align-items: flex-start; }
+  .sys-form.two { grid-template-columns: 1fr; }
+  .sys-tab { min-width: 0; flex-basis: 100%; }
 }

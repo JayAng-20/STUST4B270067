@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ROK 後台管理系統 | ROK Tech</title>
+    <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="assets/css/styles.css">
+  </head>
+  <body class="admin-body">
+    <main class="admin-shell system-shell">
+      <!-- 登入閘（沿用 app.js 的登入邏輯：data-admin-gate / data-admin-login / sessionStorage rokAdminLoggedIn）-->
+      <section class="admin-login" data-admin-gate>
+        <a class="brand" href="index.html">
+          <span class="brand-mark">ROK</span>
+          <span>ROK 後台管理系統<small>Back Office System</small></span>
+        </a>
+        <div>
+          <p class="eyebrow">Back Office</p>
+          <h1>後台管理系統登入</h1>
+          <p>訂單管理、產品進銷資料庫、人事管理三合一。此頁與前台分開，公開網站不會出現入口。</p>
+        </div>
+        <form data-admin-login>
+          <label>系統密碼
+            <input name="password" type="password" autocomplete="current-password" placeholder="輸入系統密碼" required>
+          </label>
+          <p class="form-hint">展示密碼：rok1976</p>
+          <p class="form-error" data-admin-message></p>
+          <button class="btn primary wide" type="submit">登入系統</button>
+        </form>
+      </section>
+
+      <!-- 系統主畫面 -->
+      <section class="admin-dashboard system-dashboard" data-admin-dashboard hidden>
+        <header class="sys-appbar">
+          <a class="brand" href="index.html">
+            <span class="brand-mark">ROK</span>
+            <span class="sys-title"><strong>ROK 後台管理系統</strong><span>Order ・ Inventory ・ HR</span></span>
+          </a>
+          <div class="admin-actions">
+            <a class="btn ghost" href="index.html">回前台</a>
+            <button class="btn primary" type="button" data-admin-logout>登出</button>
+          </div>
+        </header>
+
+        <!-- 分頁切換 -->
+        <nav class="sys-tabs" role="tablist" aria-label="系統模組">
+          <button class="sys-tab is-active" type="button" data-tab="orders" role="tab">訂單管理</button>
+          <button class="sys-tab" type="button" data-tab="inventory" role="tab">產品進銷資料庫</button>
+          <button class="sys-tab" type="button" data-tab="employees" role="tab">人事管理系統</button>
+        </nav>
+
+        <!-- ===== 分頁① 訂單管理（沿用 app.js 既有 hooks 與邏輯）===== -->
+        <section class="sys-panel" data-panel="orders" role="tabpanel">
+          <div class="sys-toolbar">
+            <span class="sys-sync-time" data-sync-time>尚未同步</span>
+            <span class="spacer"></span>
+            <button class="btn accent" type="button" data-refresh-orders>
+              <svg class="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-2.64-6.36"></path><polyline points="21 3 21 9 15 9"></polyline>
+              </svg>
+              重新整理訂單
+            </button>
+            <button class="btn excel" type="button" data-export-excel>
+              <svg class="excel-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line>
+              </svg>
+              匯出 Excel
+            </button>
+            <button class="btn danger" type="button" data-clear-orders>清除所有訂單</button>
+          </div>
+
+          <section class="order-stats" data-order-stats></section>
+
+          <section class="admin-controls">
+            <label>搜尋訂單
+              <input data-order-search type="search" placeholder="訂單編號、姓名、Email、商品">
+            </label>
+            <label>狀態篩選
+              <select data-order-status-filter>
+                <option>全部</option><option>新訂單</option><option>處理中</option><option>已出貨</option><option>已完成</option><option>已取消</option>
+              </select>
+            </label>
+          </section>
+
+          <section class="admin-order-layout">
+            <div class="admin-order-list" data-admin-orders></div>
+            <div data-order-detail></div>
+          </section>
+        </section>
+
+        <!-- ===== 分頁② 產品進銷資料庫（key: rokInventory）===== -->
+        <section class="sys-panel" data-panel="inventory" role="tabpanel" hidden>
+          <div class="sys-summary" data-inv-summary></div>
+
+          <div class="sys-toolbar">
+            <label class="grow">搜尋
+              <input data-inv-search type="search" placeholder="產品、顏色、軸體">
+            </label>
+            <label class="grow">產品篩選
+              <select data-inv-filter><option value="">全部產品</option></select>
+            </label>
+            <span class="spacer"></span>
+            <span class="sys-sync-time" data-inv-sync-time>尚未同步</span>
+            <button class="btn accent tiny" type="button" data-inv-refresh>重新整理</button>
+            <button class="btn primary tiny" type="button" data-inv-add>＋ 新增存貨</button>
+            <button class="btn excel tiny" type="button" data-inv-export>匯出 Excel</button>
+            <button class="btn danger tiny" type="button" data-inv-reset>重置庫存</button>
+          </div>
+
+          <div class="sys-table-wrap">
+            <table class="sys-table">
+              <thead>
+                <tr><th>產品名稱</th><th>顏色</th><th>軸體 / 規格</th><th>目前庫存</th><th>已售出</th><th>狀態</th></tr>
+              </thead>
+              <tbody data-inv-body></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ===== 分頁③ 人事管理系統（key: rokEmployees）===== -->
+        <section class="sys-panel" data-panel="employees" role="tabpanel" hidden>
+          <div class="sys-summary" data-emp-summary></div>
+
+          <div class="sys-toolbar">
+            <span class="spacer"></span>
+            <button class="btn primary tiny" type="button" data-emp-add>＋ 新增員工</button>
+            <button class="btn excel tiny" type="button" data-emp-export>匯出 Excel</button>
+          </div>
+
+          <div class="sys-table-wrap">
+            <table class="sys-table">
+              <thead>
+                <tr><th>員工編號</th><th>姓名</th><th>性別</th><th>職位</th><th>部門</th><th>薪資</th><th>入職日期</th><th>電話</th><th>住家地址</th><th>身分</th><th>資料狀態</th><th>操作</th></tr>
+              </thead>
+              <tbody data-emp-body></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <!-- ===== 新增存貨 Modal ===== -->
+    <div class="sys-modal" data-modal-add-stock hidden>
+      <div class="sys-modal-overlay" data-close-modal></div>
+      <div class="sys-modal-card">
+        <div class="sys-modal-head">
+          <div><h3>新增存貨</h3><p>選擇產品與規格，輸入要新增的數量。</p></div>
+          <button class="sys-modal-close" type="button" data-close-modal aria-label="關閉">×</button>
+        </div>
+        <form class="sys-form" data-add-stock-form>
+          <div class="sys-field"><label>產品</label><select data-stock-product></select></div>
+          <div class="sys-field"><label>顏色</label><select data-stock-color></select></div>
+          <div class="sys-field"><label>軸體 / 規格</label><select data-stock-switch></select></div>
+          <div class="sys-field"><label>新增數量</label><input type="number" min="1" value="100" data-stock-qty></div>
+          <div class="sys-modal-actions">
+            <button type="button" class="btn ghost" data-close-modal>取消</button>
+            <button type="submit" class="btn primary">確認新增</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== 新增員工 Modal ===== -->
+    <div class="sys-modal" data-modal-add-employee hidden>
+      <div class="sys-modal-overlay" data-close-modal></div>
+      <div class="sys-modal-card">
+        <div class="sys-modal-head">
+          <div><h3>新增員工</h3><p>欄位可留空仍能儲存，但該員工會被標示為「資料不完整」。</p></div>
+          <button class="sys-modal-close" type="button" data-close-modal aria-label="關閉">×</button>
+        </div>
+        <form class="sys-form two" data-add-employee-form>
+          <div class="sys-field"><label>員工編號</label><input data-emp-field="empId"></div>
+          <div class="sys-field"><label>姓名</label><input data-emp-field="name"></div>
+          <div class="sys-field"><label>性別</label><select data-emp-field="gender"><option value="">—請選擇—</option><option>男</option><option>女</option><option>其他</option></select></div>
+          <div class="sys-field"><label>職位</label><input data-emp-field="position"></div>
+          <div class="sys-field"><label>部門</label><input data-emp-field="department"></div>
+          <div class="sys-field"><label>薪資</label><input data-emp-field="salary" placeholder="如 100,000 USD"></div>
+          <div class="sys-field"><label>入職日期</label><input data-emp-field="hireDate" placeholder="YYYY/MM/DD"></div>
+          <div class="sys-field"><label>電話</label><input data-emp-field="phone" placeholder="09xxxxxxxx"></div>
+          <div class="sys-field full"><label>住家地址</label><input data-emp-field="address"></div>
+          <div class="sys-modal-actions full">
+            <button type="button" class="btn ghost" data-close-modal>取消</button>
+            <button type="submit" class="btn primary">儲存員工</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== 通用確認 Modal ===== -->
+    <div class="sys-modal" data-modal-confirm hidden>
+      <div class="sys-modal-overlay" data-close-confirm></div>
+      <div class="sys-modal-card">
+        <div class="sys-modal-head">
+          <div><h3 data-confirm-title>確認</h3><p data-confirm-text></p></div>
+          <button class="sys-modal-close" type="button" data-close-confirm aria-label="關閉">×</button>
+        </div>
+        <div class="sys-modal-actions">
+          <button type="button" class="btn ghost" data-close-confirm>取消</button>
+          <button type="button" class="btn danger" data-confirm-ok>確定</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sys-toast-wrap" data-toast-wrap></div>
+
+    <!-- SheetJS（支援樣式的相容版 xlsx-js-style，同 XLSX API）：三個分頁的匯出共用，可套用粗體標題 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script src="assets/js/data.js"></script>
+    <script src="assets/js/app.js"></script>
+    <script src="assets/js/system.js"></script>
+  </body>
+</html>

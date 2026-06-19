@@ -54,6 +54,88 @@
     return localStorage.getItem("rokOrders") === payload;
   }
 
+  // ===== 產品進銷（庫存）資料層 =====
+  // 暴露到 window.ROKInventory，讓 system.html 的庫存分頁與「下單扣庫存」共用同一套資料結構。
+  // key 為 rokInventory，與 rokOrders / rokEmployees / rokGameHighScore 完全分開。
+  const Inventory = {
+    KEY: "rokInventory",
+    comboKey(productId, color, switchName) {
+      return `${productId}|${color}|${switchName}`;
+    },
+    // 依現有產品，為每個「產品 × 顏色 × 軸體」組合各建一筆庫存，預設庫存 1,000,000、已售出 0。
+    buildCombos() {
+      const list = [];
+      (window.ROK_PRODUCTS || products || []).forEach((product) => {
+        (product.colors || []).forEach((color) => {
+          (product.switches || []).forEach((sw) => {
+            list.push({
+              key: `${product.id}|${color.name}|${sw.name}`,
+              productId: product.id,
+              productName: product.name,
+              color: color.name,
+              switchName: sw.name,
+              size: product.size,
+              switchTech: product.switchTech,
+              stock: 1000000,
+              sold: 0
+            });
+          });
+        });
+      });
+      return list;
+    },
+    get() {
+      try {
+        const raw = localStorage.getItem(Inventory.KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : null;
+      } catch (error) {
+        return null;
+      }
+    },
+    save(list) {
+      try {
+        localStorage.setItem(Inventory.KEY, JSON.stringify(list));
+        return true;
+      } catch (error) {
+        return false;
+      }
+    },
+    // 若尚無庫存資料就建立全部組合；已存在則沿用，不覆蓋。
+    ensure() {
+      let inventory = Inventory.get();
+      if (!inventory) {
+        inventory = Inventory.buildCombos();
+        Inventory.save(inventory);
+      }
+      return inventory;
+    },
+    // 一筆訂單成立後扣庫存：每個品項依「產品＋顏色＋軸體＋數量」找到對應組合，庫存減、已售出加。
+    applyOrder(order) {
+      if (!order || !Array.isArray(order.items)) return;
+      const inventory = Inventory.ensure();
+      if (!Array.isArray(inventory)) return;
+      const map = new Map(inventory.map((rec) => [rec.key, rec]));
+      let changed = false;
+      order.items.forEach((item) => {
+        const qty = Number(item.quantity) || 0;
+        if (qty <= 0) return;
+        const rec = map.get(Inventory.comboKey(item.productId, item.color, item.switchName));
+        if (rec) {
+          rec.stock = Math.max(0, (Number(rec.stock) || 0) - qty);
+          rec.sold = (Number(rec.sold) || 0) + qty;
+          changed = true;
+        } else if (window.console && console.warn) {
+          // 找不到完全對應的組合：記錄但不報錯、不中斷下單。
+          console.warn("[ROKInventory] 找不到對應庫存組合，已略過：", item.productId, item.color, item.switchName);
+        }
+      });
+      if (changed) Inventory.save(inventory);
+    }
+  };
+  window.ROKInventory = Inventory;
+
   function cartCount() {
     return getCart().reduce((sum, item) => sum + item.quantity, 0);
   }
@@ -139,7 +221,15 @@
 
     const orders = getOrders();
     orders.unshift(order);
-    saveOrders(orders);
+    const saved = saveOrders(orders);
+    if (saved) {
+      // 下單成功才連動扣庫存（rokInventory），與訂單資料分開儲存、互不影響。
+      try {
+        Inventory.applyOrder(order);
+      } catch (error) {
+        /* 庫存連動失敗不影響下單流程 */
+      }
+    }
     activeOrderId = order.id;
     return order;
   }
