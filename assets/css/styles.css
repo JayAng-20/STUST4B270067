@@ -244,7 +244,15 @@ p {
   color: #fff;
 }
 
-.btn .refresh-icon {
+/* 後台「匯出 Excel」按鈕：用品牌綠（試算表色），與其他按鈕並排。 */
+.btn.excel {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+}
+
+.btn .refresh-icon,
+.btn .excel-icon {
   flex: none;
 }
 

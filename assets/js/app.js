@@ -691,6 +691,134 @@
     toast("所有訂單已清除");
   }
 
+  // 估算字串顯示寬度（中日韓全形字算 2，其餘算 1），給 Excel 欄寬自動調整用。
+  function displayWidth(value) {
+    const text = value === undefined || value === null ? "" : String(value);
+    let width = 0;
+    for (const char of text) {
+      width += char.charCodeAt(0) > 255 ? 2 : 1;
+    }
+    return width;
+  }
+
+  // 將商品規格（顏色／軸體／尺寸／技術）彙整成一格文字。
+  function buildSpecText(item) {
+    const parts = [];
+    if (item.color) parts.push(`顏色：${item.color}`);
+    if (item.switchName) parts.push(`軸體：${item.switchName}`);
+    if (item.size) parts.push(`尺寸：${item.size}`);
+    if (item.switchTech) parts.push(`技術：${item.switchTech}`);
+    return parts.join("／");
+  }
+
+  // Excel 內的下單時間：固定 YYYY/MM/DD HH:mm，避免不同地區格式造成誤會。
+  function formatExcelDateTime(value) {
+    const date = value ? new Date(value) : null;
+    if (!date || Number.isNaN(date.getTime())) return String(value || "");
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  // 匯出檔名用的時間戳：YYYYMMDD_HHmm，例如 20260619_0945。
+  function exportTimestamp() {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+  }
+
+  // 後台「匯出 Excel」：讀取 rokOrders → 用 SheetJS 產生真正的 .xlsx 並自動下載。
+  function exportOrdersToExcel() {
+    if (typeof XLSX === "undefined") {
+      toast("Excel 函式庫尚未載入完成，請稍候再試一次");
+      return;
+    }
+
+    // 讀取與 JSON.parse 都包 try-catch，資料毀損時給友善提示而非整頁壞掉。
+    let orders;
+    try {
+      orders = JSON.parse(localStorage.getItem("rokOrders")) || [];
+    } catch (error) {
+      toast("訂單資料讀取失敗，可能已毀損，無法匯出");
+      return;
+    }
+
+    // 防呆：沒有任何訂單時提示，不產生空檔也不報錯。
+    if (!Array.isArray(orders) || orders.length === 0) {
+      toast("目前沒有訂單可匯出");
+      return;
+    }
+
+    const headers = ["訂單編號", "下單時間", "顧客姓名", "Email", "配送方式", "商品名稱", "規格", "數量", "單價", "小計", "訂單總金額", "訂單狀態"];
+    const rows = [headers];
+
+    // 一筆訂單含多項商品時：分成多列、重複同一訂單編號與訂單層級資訊；
+    // 「訂單總金額」只放在該訂單的第一列（其餘留空），避免在 Excel 加總時重複計算。
+    orders.forEach((order) => {
+      const items = Array.isArray(order.items) && order.items.length ? order.items : [{}];
+      const createdAt = formatExcelDateTime(order.createdAt);
+      const customer = order.customer || {};
+      items.forEach((item, index) => {
+        rows.push([
+          order.id || "",
+          createdAt,
+          customer.name || "",
+          customer.email || "",
+          customer.shipping || "",
+          item.name || "",
+          buildSpecText(item),
+          Number(item.quantity) || 0,
+          Number(item.price) || 0,
+          Number(item.subtotal) || 0,
+          index === 0 ? (Number(order.total) || 0) : "",
+          order.status || ""
+        ]);
+      });
+    });
+
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+
+    // 欄寬：依每欄最長內容自動調整（中文字算 2 個寬度），並設上限避免過寬。
+    worksheet["!cols"] = headers.map((header, colIndex) => {
+      let maxWidth = displayWidth(header);
+      rows.forEach((row) => {
+        maxWidth = Math.max(maxWidth, displayWidth(row[colIndex]));
+      });
+      return { wch: Math.min(maxWidth + 2, 42) };
+    });
+
+    // 標題列：粗體、白字、深色底、置中（沿用網站深色科技感）。
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" }, sz: 12 },
+      fill: { fgColor: { rgb: "171A20" } },
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+    headers.forEach((_, colIndex) => {
+      const addr = XLSX.utils.encode_cell({ r: 0, c: colIndex });
+      if (worksheet[addr]) worksheet[addr].s = headerStyle;
+    });
+
+    // 金額欄（單價/小計/訂單總金額）套千分位格式。
+    const currencyCols = [8, 9, 10];
+    for (let r = 1; r < rows.length; r += 1) {
+      currencyCols.forEach((c) => {
+        const cell = worksheet[XLSX.utils.encode_cell({ r, c })];
+        if (cell && typeof cell.v === "number") cell.z = "#,##0";
+      });
+    }
+
+    worksheet["!freeze"] = { xSplit: 0, ySplit: 1 }; // 凍結標題列
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "訂單");
+
+    try {
+      XLSX.writeFile(workbook, `ROK_Tech_訂單_${exportTimestamp()}.xlsx`);
+      toast(`已匯出 ${orders.length} 筆訂單`);
+    } catch (error) {
+      toast("匯出失敗，請稍後再試");
+    }
+  }
+
   function renderAdminGate() {
     const gate = document.querySelector("[data-admin-gate]");
     const dashboard = document.querySelector("[data-admin-dashboard]");
@@ -810,6 +938,11 @@
         syncAdminOrders(true);
         toast("訂單已更新");
         window.setTimeout(() => refreshOrdersButton.classList.remove("is-refreshing"), 600);
+      }
+
+      const exportExcelButton = event.target.closest("[data-export-excel]");
+      if (exportExcelButton) {
+        exportOrdersToExcel();
       }
 
       const clearOrdersButton = event.target.closest("[data-clear-orders]");

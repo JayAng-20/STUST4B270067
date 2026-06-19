@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>鍵盤挑戰 — 鍵帽雨 | ROK Tech</title>
+    <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <style>
+      /* ===== 鍵帽雨 Keycap Rain：遊戲專用樣式（沿用網站品牌色與深色科技感）===== */
+      .game-main { max-width: 1180px; margin: 0 auto; padding: 22px; }
+
+      .game-intro { margin-bottom: 14px; }
+      .game-intro .eyebrow { color: var(--cyan); }
+      .game-intro h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); margin: 4px 0 6px; }
+      .game-intro p { color: var(--muted); max-width: 720px; }
+
+      .game-shell {
+        position: relative;
+        border-radius: 16px;
+        overflow: hidden;
+        color: #fff;
+        background: radial-gradient(120% 120% at 50% 0%, #222a37 0%, #121519 55%, #0b0d11 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: var(--shadow);
+      }
+
+      /* HUD */
+      .game-hud {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 18px;
+        padding: 14px 18px;
+        background: rgba(0, 0, 0, 0.28);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .hud-item { display: flex; flex-direction: column; line-height: 1.15; }
+      .hud-item span {
+        font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.55);
+      }
+      .hud-item strong { font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+      .hud-lives strong { color: var(--rose); letter-spacing: 3px; }
+      .hud-lives .lost { color: rgba(255, 255, 255, 0.18); }
+      .hud-combo.is-hot strong { color: var(--amber); }
+      .hud-spacer { margin-left: auto; }
+
+      .game-back {
+        display: inline-flex; align-items: center; gap: 8px;
+        min-height: 40px; padding: 8px 16px;
+        border: 1px solid rgba(255, 255, 255, 0.32);
+        border-radius: 8px; background: transparent; color: #fff;
+        font-weight: 800; text-decoration: none; cursor: pointer;
+      }
+      .game-back:hover { background: rgba(255, 255, 255, 0.1); }
+
+      /* 遊戲舞台 */
+      .game-stage {
+        position: relative;
+        height: min(68vh, 600px);
+        min-height: 360px;
+        overflow: hidden;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+        background-size: 44px 44px;
+      }
+
+      /* 鍵帽（外層負責落下位移，內層 .cap 負責視覺與擊落動畫，避免 transform 衝突）*/
+      .keycap { position: absolute; top: 0; left: 0; width: 58px; height: 58px; will-change: transform; }
+      .keycap .cap {
+        position: relative; width: 100%; height: 100%;
+        border-radius: 12px;
+        background: linear-gradient(180deg, #fbfaf6 0%, #ece6d8 70%, #d9d2c2 100%);
+        border: 1px solid rgba(0, 0, 0, 0.18);
+        box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.9), inset 0 -6px 10px rgba(0, 0, 0, 0.18), 0 8px 16px rgba(0, 0, 0, 0.45);
+        display: grid; place-items: center;
+      }
+      .keycap .cap::before {
+        content: ""; position: absolute; inset: 7px 7px 12px 7px;
+        border-radius: 8px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0));
+        pointer-events: none;
+      }
+      .keycap .cap b { position: relative; font-size: 1.6rem; font-weight: 800; color: #1b1e25; }
+      .keycap.is-danger .cap { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.9), 0 0 0 2px var(--rose), 0 8px 16px rgba(0, 0, 0, 0.45); }
+      .keycap.is-hit .cap { animation: cap-pop 0.26s ease forwards; }
+      @keyframes cap-pop { to { transform: scale(1.4); opacity: 0; } }
+
+      /* 破裂碎片 */
+      .shard {
+        position: absolute; width: 10px; height: 10px; border-radius: 2px;
+        background: #efe7d6; pointer-events: none; z-index: 3;
+        animation: shard-fly 0.45s ease-out forwards;
+      }
+      @keyframes shard-fly { to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; } }
+
+      /* 浮動加分 */
+      .score-pop {
+        position: absolute; z-index: 4; font-weight: 800; color: var(--cyan);
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6); pointer-events: none;
+        animation: pop-up 0.65s ease-out forwards;
+      }
+      @keyframes pop-up { to { transform: translateY(-34px); opacity: 0; } }
+
+      /* 開始 / 結束 / 暫停 覆蓋畫面 */
+      .game-overlay {
+        position: absolute; inset: 0; z-index: 6;
+        display: grid; place-items: center; text-align: center; padding: 24px;
+        background: rgba(10, 12, 16, 0.8);
+        -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+        cursor: pointer;
+      }
+      .game-overlay[hidden] { display: none; }
+      .overlay-card { max-width: 540px; }
+      .overlay-card .eyebrow { color: var(--cyan); }
+      .overlay-card h2 { font-size: clamp(1.8rem, 4.5vw, 2.8rem); margin: 6px 0 10px; }
+      .overlay-card p { color: rgba(255, 255, 255, 0.82); margin: 0 auto 8px; max-width: 460px; }
+      .how-to { margin: 14px auto; padding: 14px 18px; max-width: 460px;
+        border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.85);
+        font-size: 0.92rem; text-align: left; line-height: 1.7; }
+      .key-hint { display: inline-block; margin-top: 12px; font-size: 1rem; color: #fff; }
+      .kbd {
+        display: inline-block; min-width: 22px; padding: 3px 10px; margin: 0 2px;
+        border-radius: 6px; background: #fff; color: #1b1e25; font-weight: 800;
+        box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+      }
+      .final-score { font-size: 2.6rem; font-weight: 800; color: #fff; margin: 4px 0; }
+      .best-score { color: var(--amber); font-weight: 800; }
+      .is-new-best { color: var(--amber); font-weight: 800; }
+
+      .game-note { color: var(--muted); font-size: 0.85rem; padding: 12px 4px 0; }
+
+      @media (max-width: 720px) {
+        .game-main { padding: 14px; }
+        .game-hud { gap: 12px; padding: 12px; }
+        .hud-item strong { font-size: 1.15rem; }
+        .keycap { width: 48px; height: 48px; }
+        .keycap .cap b { font-size: 1.3rem; }
+        .game-stage { height: 62vh; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="index.html"><span class="brand-mark">ROK</span><span>ROK Tech<small>Rice on Keyboard Tech</small></span></a>
+        <nav class="nav" aria-label="主選單">
+          <a href="index.html">首頁</a><a href="products.html">產品</a><a href="software.html">軟體</a><a href="downloads.html">軟體下載</a><a href="news.html">最新資訊</a><a href="store.html">商店</a><a href="about.html">品牌故事</a><a href="game.html">鍵盤挑戰</a><a class="cart-link" href="cart.html">購物車 <span class="cart-count" data-cart-count>0</span></a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="game-main">
+      <div class="game-intro">
+        <p class="eyebrow">Keycap Rain</p>
+        <h1>鍵帽雨 — ROK 打字挑戰</h1>
+        <p>印著 A–Z 的鍵帽會從上方落下，按下對應字母把它打掉。考驗你的手速與準度，速度會越來越快！</p>
+      </div>
+
+      <section class="game-shell">
+        <div class="game-hud">
+          <div class="hud-item"><span>Score 分數</span><strong data-score>0</strong></div>
+          <div class="hud-item"><span>Level 關卡</span><strong data-level>1</strong></div>
+          <div class="hud-item hud-lives"><span>Lives 生命</span><strong data-lives>♥♥♥</strong></div>
+          <div class="hud-item hud-combo"><span>Combo 連擊</span><strong data-combo>x0</strong></div>
+          <div class="hud-spacer"></div>
+          <a class="game-back" href="index.html">← 返回公司首頁</a>
+        </div>
+
+        <div class="game-stage" data-stage>
+          <!-- 開始畫面 -->
+          <div class="game-overlay" data-overlay-start>
+            <div class="overlay-card">
+              <p class="eyebrow">Ready</p>
+              <h2>鍵帽雨 Keycap Rain</h2>
+              <div class="how-to">
+                字母鍵帽會從上方落下，按下對應字母把它打掉。<br>
+                漏接會扣一條命，三條命用完就結束。<br>
+                連續打中可累積 Combo 加分，分數越高、速度越快！
+              </div>
+              <p class="key-hint">按 <span class="kbd">空白鍵</span> 開始遊戲</p>
+              <p class="game-note" style="color: rgba(255,255,255,0.6);">建議使用電腦鍵盤遊玩（手機可點擊鍵帽）</p>
+            </div>
+          </div>
+
+          <!-- 暫停畫面 -->
+          <div class="game-overlay" data-overlay-pause hidden>
+            <div class="overlay-card">
+              <p class="eyebrow">Paused</p>
+              <h2>已暫停</h2>
+              <p class="key-hint">按 <span class="kbd">P</span> 或 <span class="kbd">Esc</span> 繼續</p>
+            </div>
+          </div>
+
+          <!-- 結束畫面 -->
+          <div class="game-overlay" data-overlay-over hidden>
+            <div class="overlay-card">
+              <p class="eyebrow">Game Over</p>
+              <h2>遊戲結束</h2>
+              <p>本局分數</p>
+              <div class="final-score" data-final-score>0</div>
+              <p data-best-line>歷史最高分：<span class="best-score" data-best-score>0</span></p>
+              <p class="key-hint">按 <span class="kbd">空白鍵</span> 重新開始</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <p class="game-note">控制：<span class="kbd">A</span>–<span class="kbd">Z</span> 擊落對應鍵帽 ・ <span class="kbd">空白鍵</span> 開始／重來 ・ <span class="kbd">P</span> / <span class="kbd">Esc</span> 暫停。最高分記錄於本機瀏覽器。</p>
+    </main>
+
+    <footer class="site-footer"><div class="footer-inner"><p>© 2026 鍵盤撒米科技有限公司 Rice on Keyboard Tech.</p><div class="footer-links"><a href="products.html">產品</a><a href="downloads.html">下載</a><a href="game.html">鍵盤挑戰</a></div></div></footer>
+
+    <script src="assets/js/data.js"></script>
+    <script src="assets/js/app.js"></script>
+    <script>
+      // ===== 鍵帽雨 Keycap Rain：純 vanilla JS 遊戲邏輯（不依賴任何函式庫）=====
+      (function () {
+        "use strict";
+
+        // 最高分用獨立的 localStorage key（rokGameHighScore），與訂單 rokOrders 完全分開，互不干擾。
+        const HIGH_SCORE_KEY = "rokGameHighScore";
+
+        function getHighScore() {
+          try {
+            return Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0;
+          } catch (error) {
+            return 0;
+          }
+        }
+        function setHighScore(value) {
+          try {
+            localStorage.setItem(HIGH_SCORE_KEY, String(value));
+          } catch (error) {
+            /* 隱私模式 / 容量已滿時就單純不存，不影響遊戲進行 */
+          }
+        }
+
+        // ---- 參數設定 ----
+        const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const START_LIVES = 3;
+        const BASE_FALL = 85;          // 第 1 關落下速度 (px/秒)
+        const FALL_PER_LEVEL = 24;     // 每升一關增加的落下速度
+        const BASE_SPAWN = 1.5;        // 第 1 關生成間隔 (秒)
+        const SPAWN_PER_LEVEL = 0.12;  // 每升一關縮短的生成間隔
+        const SPAWN_MIN = 0.55;        // 生成間隔下限
+        const POINTS_PER_LEVEL = 300;  // 每累積這麼多分升一關
+
+        // ---- DOM ----
+        const stage = document.querySelector("[data-stage]");
+        const scoreEl = document.querySelector("[data-score]");
+        const levelEl = document.querySelector("[data-level]");
+        const livesEl = document.querySelector("[data-lives]");
+        const comboBox = document.querySelector(".hud-combo");
+        const comboEl = document.querySelector("[data-combo]");
+        const overlayStart = document.querySelector("[data-overlay-start]");
+        const overlayPause = document.querySelector("[data-overlay-pause]");
+        const overlayOver = document.querySelector("[data-overlay-over]");
+        const finalScoreEl = document.querySelector("[data-final-score]");
+        const bestScoreEl = document.querySelector("[data-best-score]");
+        const bestLineEl = document.querySelector("[data-best-line]");
+
+        // ---- 狀態 ----
+        let state = "start";           // start | playing | paused | over
+        let score = 0;
+        let level = 1;
+        let lives = START_LIVES;
+        let combo = 0;
+        let keycaps = [];              // { el, cap, letter, x, y, speed, dead }
+        let spawnTimer = 0;
+        let lastTime = 0;
+        let rafId = null;
+        let stageW = 0;
+        let stageH = 0;
+        let highScore = getHighScore();
+
+        function measureStage() {
+          stageW = stage.clientWidth;
+          stageH = stage.clientHeight;
+        }
+
+        function capWidth() {
+          return window.innerWidth <= 720 ? 48 : 58;
+        }
+
+        function fallSpeed() {
+          return BASE_FALL + (level - 1) * FALL_PER_LEVEL;
+        }
+        function spawnInterval() {
+          return Math.max(SPAWN_MIN, BASE_SPAWN - (level - 1) * SPAWN_PER_LEVEL);
+        }
+
+        function updateHUD() {
+          scoreEl.textContent = score;
+          levelEl.textContent = level;
+          const filled = "♥".repeat(Math.max(0, lives));
+          const lost = "♥".repeat(Math.max(0, START_LIVES - lives));
+          livesEl.innerHTML = filled + '<span class="lost">' + lost + "</span>";
+          comboEl.textContent = "x" + combo;
+          comboBox.classList.toggle("is-hot", combo >= 5);
+        }
+
+        // ---- 鍵帽 ----
+        function spawnKeycap() {
+          const size = capWidth();
+          const letter = LETTERS[Math.floor(Math.random() * LETTERS.length)];
+          const maxX = Math.max(4, stageW - size - 4);
+          const x = 4 + Math.random() * (maxX - 4);
+
+          const el = document.createElement("div");
+          el.className = "keycap";
+          el.style.width = size + "px";
+          el.style.height = size + "px";
+          el.style.transform = "translate(" + x + "px, -" + size + "px)";
+          el.innerHTML = '<div class="cap"><b>' + letter + "</b></div>";
+
+          const item = { el: el, cap: el.firstChild, letter: letter, x: x, y: -size, speed: fallSpeed(), dead: false };
+          el.addEventListener("pointerdown", function () {
+            // 手機 / 觸控：直接點擊鍵帽也能擊落
+            if (state === "playing" && !item.dead) registerHit(item);
+          });
+          stage.appendChild(el);
+          keycaps.push(item);
+        }
+
+        function moveKeycaps(dt) {
+          for (let i = keycaps.length - 1; i >= 0; i--) {
+            const item = keycaps[i];
+            if (item.dead) continue;
+            item.y += item.speed * dt;
+            item.el.style.transform = "translate(" + item.x + "px, " + item.y + "px)";
+            // 接近底部時加上警示外框
+            if (item.y > stageH - item.el.offsetHeight - 70) item.el.classList.add("is-danger");
+            if (item.y >= stageH) {
+              missKeycap(item);
+            }
+          }
+        }
+
+        function removeItem(item) {
+          item.dead = true;
+          const idx = keycaps.indexOf(item);
+          if (idx !== -1) keycaps.splice(idx, 1);
+        }
+
+        function missKeycap(item) {
+          removeItem(item);
+          if (item.el.parentNode) item.el.parentNode.removeChild(item.el);
+          combo = 0;
+          lives -= 1;
+          updateHUD();
+          if (lives <= 0) {
+            gameOver();
+          }
+        }
+
+        function registerHit(item) {
+          removeItem(item);
+          combo += 1;
+          const multiplier = 1 + Math.min(combo, 12) * 0.1;     // Combo 越高加成越多（上限 x2.2）
+          const gained = Math.round(10 * multiplier);
+          score += gained;
+
+          const cx = item.x + item.el.offsetWidth / 2;
+          const cy = item.y + item.el.offsetHeight / 2;
+          spawnShards(cx, cy);
+          spawnScorePop(cx, item.y, "+" + gained);
+
+          item.el.classList.add("is-hit");
+          window.setTimeout(function () {
+            if (item.el.parentNode) item.el.parentNode.removeChild(item.el);
+          }, 260);
+
+          updateHUD();
+          checkLevelUp();
+        }
+
+        function checkLevelUp() {
+          const newLevel = Math.floor(score / POINTS_PER_LEVEL) + 1;
+          if (newLevel > level) level = newLevel;
+        }
+
+        function hitLetter(letter) {
+          let target = null;
+          // 同字母有多個時，打掉最接近底部（最危險）的那一個
+          for (let i = 0; i < keycaps.length; i++) {
+            const item = keycaps[i];
+            if (item.dead || item.letter !== letter) continue;
+            if (!target || item.y > target.y) target = item;
+          }
+          if (target) registerHit(target);
+        }
+
+        // ---- 特效 ----
+        function spawnShards(cx, cy) {
+          for (let i = 0; i < 7; i++) {
+            const shard = document.createElement("div");
+            shard.className = "shard";
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 30 + Math.random() * 45;
+            shard.style.left = cx + "px";
+            shard.style.top = cy + "px";
+            shard.style.setProperty("--dx", Math.cos(angle) * dist + "px");
+            shard.style.setProperty("--dy", (Math.sin(angle) * dist + 20) + "px");
+            shard.style.setProperty("--rot", (Math.random() * 540 - 270) + "deg");
+            stage.appendChild(shard);
+            shard.addEventListener("animationend", function () {
+              if (shard.parentNode) shard.parentNode.removeChild(shard);
+            });
+          }
+        }
+
+        function spawnScorePop(cx, y, text) {
+          const pop = document.createElement("div");
+          pop.className = "score-pop";
+          pop.textContent = text;
+          pop.style.left = cx + "px";
+          pop.style.top = y + "px";
+          stage.appendChild(pop);
+          pop.addEventListener("animationend", function () {
+            if (pop.parentNode) pop.parentNode.removeChild(pop);
+          });
+        }
+
+        function clearAllKeycaps() {
+          keycaps.forEach(function (item) {
+            if (item.el.parentNode) item.el.parentNode.removeChild(item.el);
+          });
+          keycaps = [];
+          // 清掉殘留的碎片與加分字
+          stage.querySelectorAll(".shard, .score-pop").forEach(function (node) {
+            node.parentNode.removeChild(node);
+          });
+        }
+
+        // ---- 流程控制 ----
+        function showOverlay(which) {
+          overlayStart.hidden = which !== "start";
+          overlayPause.hidden = which !== "pause";
+          overlayOver.hidden = which !== "over";
+        }
+
+        function startGame() {
+          clearAllKeycaps();
+          score = 0;
+          level = 1;
+          lives = START_LIVES;
+          combo = 0;
+          spawnTimer = 0;
+          updateHUD();
+          showOverlay(null);
+          state = "playing";
+          measureStage();
+          lastTime = performance.now();
+          if (rafId) cancelAnimationFrame(rafId);
+          rafId = requestAnimationFrame(loop);
+        }
+
+        function gameOver() {
+          state = "over";
+          if (rafId) cancelAnimationFrame(rafId);
+          rafId = null;
+          const isNewBest = score > highScore;
+          if (isNewBest) {
+            highScore = score;
+            setHighScore(highScore);
+          }
+          finalScoreEl.textContent = score;
+          bestScoreEl.textContent = highScore;
+          bestLineEl.innerHTML = isNewBest
+            ? '<span class="is-new-best">🏆 新紀錄！最高分 ' + highScore + "</span>"
+            : '歷史最高分：<span class="best-score">' + highScore + "</span>";
+          showOverlay("over");
+        }
+
+        function pauseGame() {
+          if (state !== "playing") return;
+          state = "paused";
+          if (rafId) cancelAnimationFrame(rafId);
+          rafId = null;
+          showOverlay("pause");
+        }
+
+        function resumeGame() {
+          if (state !== "paused") return;
+          state = "playing";
+          showOverlay(null);
+          lastTime = performance.now();
+          rafId = requestAnimationFrame(loop);
+        }
+
+        function loop(now) {
+          if (state !== "playing") return;
+          const dt = Math.min(0.05, (now - lastTime) / 1000); // 夾住 dt，避免分頁切回時瞬移
+          lastTime = now;
+
+          spawnTimer += dt;
+          if (spawnTimer >= spawnInterval()) {
+            spawnTimer = 0;
+            spawnKeycap();
+          }
+          moveKeycaps(dt);
+          rafId = requestAnimationFrame(loop);
+        }
+
+        // ---- 輸入 ----
+        document.addEventListener("keydown", function (event) {
+          const code = event.code;
+
+          if (code === "Space") {
+            event.preventDefault(); // 避免空白鍵捲動頁面
+            if (state === "start" || state === "over") startGame();
+            return;
+          }
+
+          if (code === "KeyP" || code === "Escape") {
+            if (state === "playing") pauseGame();
+            else if (state === "paused") resumeGame();
+            return;
+          }
+
+          if (state === "playing" && /^Key[A-Z]$/.test(code)) {
+            if (event.repeat) return;          // 長按只算一次
+            hitLetter(code.slice(3));          // KeyA -> A
+          }
+        });
+
+        // 點擊開始 / 結束畫面也能開始（行動裝置友善）
+        overlayStart.addEventListener("click", function () {
+          if (state === "start") startGame();
+        });
+        overlayOver.addEventListener("click", function () {
+          if (state === "over") startGame();
+        });
+        overlayPause.addEventListener("click", resumeGame);
+
+        window.addEventListener("resize", measureStage);
+        document.addEventListener("visibilitychange", function () {
+          if (document.hidden && state === "playing") pauseGame();
+        });
+
+        // 初始化
+        measureStage();
+        updateHUD();
+        showOverlay("start");
+      })();
+    </script>
+  </body>
+</html>

@@ -44,6 +44,16 @@
               </svg>
               重新整理訂單
             </button>
+            <button class="btn excel" type="button" data-export-excel>
+              <svg class="excel-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="3" y1="15" x2="21" y2="15"></line>
+                <line x1="9" y1="3" x2="9" y2="21"></line>
+                <line x1="15" y1="3" x2="15" y2="21"></line>
+              </svg>
+              匯出 Excel
+            </button>
             <a class="btn ghost" href="index.html">回前台</a>
             <button class="btn danger" type="button" data-clear-orders>清除所有訂單</button>
             <button class="btn primary" type="button" data-admin-logout>登出</button>
@@ -82,6 +92,8 @@
         </section>
       </section>
     </main>
+    <!-- SheetJS（支援樣式的相容版 xlsx-js-style，同 XLSX API）：用於後台「匯出 Excel」，產生真正的 .xlsx 並可套用粗體標題 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <script src="assets/js/data.js"></script>
     <script src="assets/js/app.js"></script>
   </body>
