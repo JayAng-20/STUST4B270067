@@ -1,0 +1,8 @@
+ROK Tech Quick Guide
+
+Included topics:
+- 100%, 96%, 80%, and 60% layout shortcuts
+- RGB mode switching
+- Bluetooth pairing
+- ROK Control Center profile import
+- Warranty and care notes

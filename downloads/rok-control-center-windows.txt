@@ -1,0 +1,5 @@
+ROK Control Center for Windows
+Version: 2.4.1
+
+This is a coursework website download placeholder for the fictional ROK Tech brand.
+Supported features: key remapping, RGB profiles, macro editor, magnetic switch trigger tuning.

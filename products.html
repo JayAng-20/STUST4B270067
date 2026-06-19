@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>產品 | ROK Tech</title>
+    <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="assets/css/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="index.html"><span class="brand-mark">ROK</span><span>ROK Tech<small>Rice on Keyboard Tech</small></span></a>
+        <nav class="nav" aria-label="主選單">
+          <a href="index.html">首頁</a><a href="products.html">產品</a><a href="software.html">軟體</a><a href="downloads.html">軟體下載</a><a href="news.html">最新資訊</a><a href="store.html">商店</a><a href="about.html">品牌故事</a><a class="cart-link" href="cart.html">購物車 <span class="cart-count" data-cart-count>0</span></a>
+        </nav>
+      </div>
+    </header>
+    <main>
+      <section class="page-hero">
+        <div class="page-hero-inner">
+          <p class="eyebrow">Products</p>
+          <h1>鍵盤產品線</h1>
+          <p>從基本機械軸、光軸到磁軸，ROK Tech 提供商務與電競兩種路線，並覆蓋 100%、96%、80%、60% 四種配列。</p>
+        </div>
+      </section>
+      <section class="section">
+        <div class="filters" aria-label="產品篩選">
+          <label>配列
+            <select data-filter-size>
+              <option>全部</option><option>100%</option><option>96%</option><option>80%</option><option>60%</option>
+            </select>
+          </label>
+          <label>軸體
+            <select data-filter-tech>
+              <option>全部</option><option>機械軸</option><option>光軸</option><option>磁軸</option>
+            </select>
+          </label>
+          <label>風格
+            <select data-filter-style>
+              <option>全部</option><option>商務風</option><option>電競風</option>
+            </select>
+          </label>
+          <label>排序
+            <select data-sort>
+              <option value="featured">推薦排序</option><option value="price-low">價格低到高</option><option value="price-high">價格高到低</option><option value="size">配列大小</option>
+            </select>
+          </label>
+        </div>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Catalog</p>
+            <h2 data-product-count>8 件商品</h2>
+          </div>
+        </div>
+        <div class="product-grid" data-product-grid></div>
+      </section>
+      <section class="section tight">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Switch Compare</p>
+            <h2>軸體怎麼選</h2>
+          </div>
+        </div>
+        <div class="switch-grid">
+          <article class="spec-card"><h3>機械軸</h3><p>打感明確、可玩性高，適合把鍵盤當成每天工作工具的人。</p></article>
+          <article class="spec-card"><h3>光軸</h3><p>觸發乾淨、耐用度高，適合高頻輸入與想要穩定反應的使用者。</p></article>
+          <article class="spec-card"><h3>磁軸</h3><p>觸發點可調、快速重置，適合競技玩家與喜歡精細設定的人。</p></article>
+        </div>
+      </section>
+    </main>
+    <footer class="site-footer"><div class="footer-inner"><p>© 2026 鍵盤撒米科技有限公司 Rice on Keyboard Tech.</p><div class="footer-links"><a href="products.html">產品</a><a href="downloads.html">下載</a><a href="cart.html">購物車</a></div></div></footer>
+    <script src="assets/js/data.js"></script>
+    <script src="assets/js/app.js"></script>
+  </body>
+</html>
