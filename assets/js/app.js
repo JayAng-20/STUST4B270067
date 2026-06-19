@@ -9,6 +9,9 @@
   const orderStatuses = ["新訂單", "處理中", "已出貨", "已完成", "已取消"];
   const adminPassword = "rok1976";
   let activeOrderId = new URLSearchParams(window.location.search).get("order") || "";
+  // 後台同步用：記錄「上一次看到的訂單原始字串」。
+  // 只有當這個字串真的改變時才重繪畫面，避免輪詢造成畫面一直閃動。
+  let lastOrdersSignature = null;
 
   function getCart() {
     try {
@@ -19,7 +22,13 @@
   }
 
   function saveCart(cart) {
-    localStorage.setItem("rokCart", JSON.stringify(cart));
+    // 包 try-catch：無痕模式或儲存空間已滿時，setItem 會丟例外，
+    // 不攔的話會讓整個加入購物車流程中斷。
+    try {
+      localStorage.setItem("rokCart", JSON.stringify(cart));
+    } catch (error) {
+      toast("購物車儲存失敗（可能是無痕模式或瀏覽器儲存空間已滿）");
+    }
     updateCartBadge();
   }
 
@@ -31,8 +40,18 @@
     }
   }
 
+  // 寫回訂單到 localStorage，回傳 true 代表「寫入並驗證成功」。
+  // 1) 用 try-catch 包住，避免無痕模式 / 容量已滿時整頁壞掉。
+  // 2) 寫入後立刻讀回比對，確認資料確實落地（前台寫入驗證）。
   function saveOrders(orders) {
-    localStorage.setItem("rokOrders", JSON.stringify(orders));
+    const payload = JSON.stringify(orders);
+    try {
+      localStorage.setItem("rokOrders", payload);
+    } catch (error) {
+      toast("訂單儲存失敗（可能是無痕模式或瀏覽器儲存空間已滿）");
+      return false;
+    }
+    return localStorage.getItem("rokOrders") === payload;
   }
 
   function cartCount() {
@@ -550,6 +569,11 @@
     if (!listTarget || !detailTarget) return;
     if (!isAdminLoggedIn()) return;
 
+    // 每次重繪都把「目前看到的訂單字串」設為基準線，
+    // 之後輪詢/storage 事件只要發現和這條基準線不同，就代表有新變動，才會再重繪。
+    lastOrdersSignature = localStorage.getItem("rokOrders");
+    stampSyncTime();
+
     const allOrders = getOrders();
     const statusFilter = document.querySelector("[data-order-status-filter]")?.value || "全部";
     const query = document.querySelector("[data-order-search]")?.value.trim() || "";
@@ -682,6 +706,49 @@
     }
   }
 
+  // 更新後台右上角「上次同步 HH:MM:SS」小字，讓你一眼看出自動同步還在運作。
+  function stampSyncTime() {
+    const node = document.querySelector("[data-sync-time]");
+    if (!node) return;
+    const now = new Date();
+    const pad = (value) => String(value).padStart(2, "0");
+    node.textContent = `上次同步 ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  }
+
+  // 後台同步核心：只有在「localStorage 的訂單字串和上次不同」時才重繪，避免畫面閃動。
+  // force=true 代表使用者按了「重新整理訂單」或收到跨分頁事件，無論如何都強制刷新一次。
+  function syncAdminOrders(force) {
+    if (!document.querySelector("[data-admin-orders]")) return; // 只在後台頁有作用
+    if (!isAdminLoggedIn()) return;
+    const current = localStorage.getItem("rokOrders");
+    if (!force && current === lastOrdersSignature) return; // 沒有變動就不動畫面
+    renderAdminOrders(); // renderAdminOrders 內會更新 lastOrdersSignature 與同步時間
+  }
+
+  // 啟動後台自動同步（兩種機制互為備援）。只在後台頁面執行。
+  function setupAdminSync() {
+    if (!document.querySelector("[data-admin-dashboard]")) return;
+
+    // 機制一：storage 事件 —— 前台在「其他分頁」寫入訂單時會即時觸發。
+    // 注意：storage 事件只會在其他分頁觸發，不會在自己這個分頁觸發，
+    // 所以一定要再搭配下面的輪詢當備援。
+    window.addEventListener("storage", (event) => {
+      // event.key === null 代表整個 localStorage 被清空（例如 clear()），也要同步。
+      if (event.key === "rokOrders" || event.key === null) {
+        syncAdminOrders(true);
+      }
+    });
+
+    // 機制二：每 2.5 秒輪詢一次當備援，涵蓋同分頁操作或 storage 事件未送達的情況。
+    window.setInterval(() => syncAdminOrders(false), 2500);
+
+    // 分頁重新取得焦點 / 從背景切回前景時，立即同步一次，體感更即時。
+    window.addEventListener("focus", () => syncAdminOrders(false));
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) syncAdminOrders(false);
+    });
+  }
+
   function updateCartItem(key, delta) {
     const cart = getCart();
     const item = cart.find((entry) => entry.key === key);
@@ -736,6 +803,15 @@
         renderAdminOrders();
       }
 
+      const refreshOrdersButton = event.target.closest("[data-refresh-orders]");
+      if (refreshOrdersButton) {
+        // 一鍵強制重讀 localStorage 最新訂單，刷新列表與統計（不重整整頁）。
+        refreshOrdersButton.classList.add("is-refreshing");
+        syncAdminOrders(true);
+        toast("訂單已更新");
+        window.setTimeout(() => refreshOrdersButton.classList.remove("is-refreshing"), 600);
+      }
+
       const clearOrdersButton = event.target.closest("[data-clear-orders]");
       if (clearOrdersButton) {
         clearAllOrders();
@@ -776,6 +852,13 @@
       if (!cart.length) return;
       const formData = new FormData(event.target);
       const order = createOrder(cart, formData);
+      // 寫入後驗證：再次從 localStorage 確認訂單確實存在，才視為下單成功並導向成功頁。
+      // 若寫入失敗（例如無痕模式 / 容量已滿），就停在購物車並提示，不清空購物車。
+      const saved = getOrders().some((entry) => entry.id === order.id);
+      if (!saved) {
+        toast("訂單建立失敗，資料未能寫入瀏覽器，請再試一次");
+        return;
+      }
       toast(`${formData.get("name")}，訂單 ${order.id} 已建立`);
       saveCart([]);
       window.location.href = `order-success.html?order=${encodeURIComponent(order.id)}`;
@@ -818,6 +901,7 @@
     renderCart();
     renderOrderSuccess();
     renderAdminGate();
+    setupAdminSync();
     bindEvents();
   });
 })();

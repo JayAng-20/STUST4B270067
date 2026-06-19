@@ -237,6 +237,37 @@ p {
   width: 100%;
 }
 
+/* 後台「重新整理訂單」按鈕：用品牌青色，明顯但與既有按鈕風格一致。 */
+.btn.accent {
+  border-color: var(--cyan);
+  background: var(--cyan);
+  color: #fff;
+}
+
+.btn .refresh-icon {
+  flex: none;
+}
+
+/* 點擊時讓圖示轉一圈，給使用者「已重新讀取」的視覺回饋。 */
+.btn.is-refreshing .refresh-icon {
+  animation: rok-spin 0.6s linear;
+}
+
+@keyframes rok-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 後台右上角「上次同步 HH:MM:SS」小字提示。 */
+.admin-actions .sync-time {
+  align-self: center;
+  margin-right: 4px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .section {
   max-width: 1180px;
   margin: 0 auto;
