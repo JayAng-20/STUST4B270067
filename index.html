@@ -29,7 +29,16 @@
     </header>
 
     <main>
-      <section class="hero">
+      <section class="hero" data-hero-carousel>
+        <div class="hero-slides">
+          <div class="hero-slide is-active"><img src="assets/images/rok-strike-80.png" alt="ROK 鍵盤" loading="eager"></div>
+          <div class="hero-slide"><video src="assets/videos/hero-1.mp4" muted loop playsinline preload="metadata"></video></div>
+          <div class="hero-slide"><video src="assets/videos/hero-2.mp4" muted loop playsinline preload="metadata"></video></div>
+          <div class="hero-slide"><video src="assets/videos/hero-3.mp4" muted loop playsinline preload="metadata"></video></div>
+        </div>
+        <button class="hero-nav prev" type="button" data-hero-prev aria-label="上一個廣告">&#8249;</button>
+        <button class="hero-nav next" type="button" data-hero-next aria-label="下一個廣告">&#8250;</button>
+        <div class="hero-dots" data-hero-dots></div>
         <div class="hero-content">
           <p class="eyebrow">Physical Randomness, Engineered</p>
           <h1>ROK Tech</h1>

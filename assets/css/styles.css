@@ -141,18 +141,55 @@ select {
 }
 
 .hero {
+  position: relative;
   min-height: 72vh;
   display: grid;
   align-items: end;
-  background-image:
-    linear-gradient(90deg, rgba(10, 11, 13, 0.9), rgba(10, 11, 13, 0.56) 44%, rgba(10, 11, 13, 0.12)),
-    url("../images/rok-strike-80.png");
-  background-position: center;
-  background-size: cover;
+  overflow: hidden;
+  background: #0a0b0d;
   color: #fff;
 }
 
+/* Hero 輪播：原圖 + 三部影片，共 4 張 */
+.hero-slides { position: absolute; inset: 0; z-index: 0; }
+.hero-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 0.8s ease; }
+.hero-slide.is-active { opacity: 1; }
+.hero-slide img, .hero-slide video { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* 文字可讀性遮罩（蓋在輪播上、文字下） */
+.hero::after {
+  content: "";
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(90deg, rgba(10, 11, 13, 0.9), rgba(10, 11, 13, 0.56) 44%, rgba(10, 11, 13, 0.12));
+}
+
+/* 左右方向鍵 */
+.hero-nav {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(10, 11, 13, 0.4);
+  color: #fff; font-size: 1.8rem; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+}
+.hero-nav:hover { background: rgba(10, 11, 13, 0.7); }
+.hero-nav.prev { left: 18px; }
+.hero-nav.next { right: 18px; }
+
+/* 圓點指示 */
+.hero-dots {
+  position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 3;
+  display: flex; gap: 8px;
+}
+.hero-dot {
+  width: 10px; height: 10px; border-radius: 999px; padding: 0;
+  border: 0; background: rgba(255, 255, 255, 0.45); cursor: pointer; transition: width 0.3s, background 0.3s;
+}
+.hero-dot.is-active { width: 26px; background: #fff; }
+
 .hero-content {
+  position: relative;
+  z-index: 2;
   max-width: 1180px;
   width: 100%;
   margin: 0 auto;
@@ -1492,4 +1529,51 @@ dd {
   .sys-appbar { flex-direction: column; align-items: flex-start; }
   .sys-form.two { grid-template-columns: 1fr; }
   .sys-tab { min-width: 0; flex-basis: 100%; }
+}
+
+/* ===================== 結帳付款視窗 ===================== */
+.checkout-card { width: min(620px, 100%); }
+.checkout-step-hint { margin: 14px 0 8px; color: var(--muted); font-size: 0.85rem; font-weight: 700; }
+
+.pay-section { margin-bottom: 18px; }
+.pay-section h4 { margin: 0 0 10px; font-size: 1rem; }
+
+.pay-methods { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+.pay-method {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
+  cursor: pointer; font-weight: 700;
+}
+.pay-method input { accent-color: var(--ink); }
+.pay-method:has(input:checked) { border-color: var(--ink); box-shadow: 0 0 0 2px rgba(18, 19, 21, 0.08); background: var(--soft); }
+
+.pay-panel { margin-top: 4px; }
+.pay-note { color: var(--muted); font-size: 0.9rem; margin: 6px 0; }
+
+.atm-box {
+  display: flex; flex-direction: column; gap: 4px;
+  border: 1px dashed var(--cyan); border-radius: 10px; padding: 14px 16px; background: #f0f9ff;
+}
+.atm-box span { color: var(--muted); font-size: 0.82rem; font-weight: 800; }
+.atm-box strong { font-size: 1.25rem; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+
+.inst-info { display: flex; align-items: center; min-height: 44px; font-weight: 700; }
+.inst-info strong { color: var(--ink); font-size: 1.15rem; margin-right: 4px; }
+
+.pay-total {
+  display: flex; align-items: center; justify-content: space-between;
+  border-top: 1px solid var(--line); padding-top: 14px; margin-top: 6px;
+}
+.pay-total strong { font-size: 1.5rem; }
+
+/* 成功頁付款區塊 */
+.success-pay { border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin: 18px 0; background: #fff; }
+.success-pay h3 { margin: 0 0 8px; }
+
+/* 後台付款明細行 */
+.order-pay-detail { margin: 10px 0 0; color: var(--muted); font-size: 0.9rem; }
+.order-pay-detail span { font-weight: 800; color: var(--ink); margin-right: 6px; }
+
+@media (max-width: 720px) {
+  .pay-methods { grid-template-columns: 1fr; }
 }

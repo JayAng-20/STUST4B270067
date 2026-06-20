@@ -136,6 +136,43 @@
   };
   window.ROKInventory = Inventory;
 
+  // ===== 付款相關常數與工具 =====
+  // 展示用的虛擬 ATM 匯款帳號（國泰世華），格式含空格。
+  const ATM_ACCOUNT = { bank: "國泰世華", account: "013-0001 4796 6754 8088" };
+  const INSTALLMENT_OPTIONS = [3, 6, 9, 12, 24, 48];
+
+  // 卡號：只留數字、上限 16 碼、每 4 碼一個空格。
+  function formatCardNumber(value) {
+    const digits = String(value || "").replace(/\D/g, "").slice(0, 16);
+    return digits.replace(/(.{4})/g, "$1 ").trim();
+  }
+  // 到期日：MM/YY，輸入滿 2 碼自動補「/」；刪除時不自動補，避免游標卡住。
+  function formatExpiry(value, isDelete) {
+    const digits = String(value || "").replace(/\D/g, "").slice(0, 4);
+    if (digits.length <= 2) {
+      return digits.length === 2 && !isDelete ? digits + "/" : digits;
+    }
+    return digits.slice(0, 2) + "/" + digits.slice(2);
+  }
+  // 安全碼：只留數字、上限 3 碼。
+  function formatCvv(value) {
+    return String(value || "").replace(/\D/g, "").slice(0, 3);
+  }
+  // 0 利率分期每期金額（四捨五入）。
+  function installmentPerPayment(total, periods) {
+    const n = Number(periods) || 1;
+    return Math.round((Number(total) || 0) / n);
+  }
+  // 把付款資訊整理成一行可讀字串（後台、Excel、成功頁共用）。
+  function paymentSummary(payment) {
+    if (!payment || !payment.method) return "—";
+    const m = payment.method;
+    if (m === "ATM轉帳") return `ATM轉帳・${payment.atmBank} ${payment.atmAccount}`;
+    if (m === "信用卡") return `信用卡・末四碼 ${payment.cardLast4}（到期 ${payment.cardExpiry}）`;
+    if (m === "信用卡分期") return `信用卡分期・${payment.installmentPeriods} 期 每期 ${formatPrice(payment.installmentPerPayment)}（0 利率，末四碼 ${payment.cardLast4}）`;
+    return m; // 貨到付款
+  }
+
   function cartCount() {
     return getCart().reduce((sum, item) => sum + item.quantity, 0);
   }
@@ -182,7 +219,7 @@
     };
   }
 
-  function createOrder(cart, formData) {
+  function createOrder(cart, customer, payment) {
     const now = new Date();
     const totals = calculateCartTotals(cart);
     const items = cart
@@ -209,14 +246,16 @@
       createdAt: now.toISOString(),
       status: "新訂單",
       customer: {
-        name: String(formData.get("name") || "").trim(),
-        email: String(formData.get("email") || "").trim(),
-        shipping: String(formData.get("shipping") || "").trim()
+        name: String((customer && customer.name) || "").trim(),
+        email: String((customer && customer.email) || "").trim(),
+        shipping: String((customer && customer.shipping) || "").trim()
       },
       items,
       subtotal: totals.subtotal,
       shippingFee: totals.shippingFee,
-      total: totals.total
+      total: totals.total,
+      // 付款資訊：不保存完整卡號與 CVV（接近真實金流做法），只留末四碼等。
+      payment: payment || { method: "貨到付款" }
     };
 
     const orders = getOrders();
@@ -541,21 +580,176 @@
           <div><span>小計</span><strong>${formatPrice(totals.subtotal)}</strong></div>
           <div><span>運費</span><strong>${totals.shippingFee === 0 ? "免運" : formatPrice(totals.shippingFee)}</strong></div>
           <div class="total"><span>總計</span><strong>${formatPrice(totals.total)}</strong></div>
-          <form data-checkout-form>
-            <label>收件姓名<input required name="name" placeholder="ROK 使用者"></label>
-            <label>電子郵件<input required type="email" name="email" placeholder="hello@example.com"></label>
-            <label>配送方式
-              <select name="shipping">
-                <option>宅配到府</option>
-                <option>超商取貨</option>
-                <option>實驗室自取</option>
-              </select>
-            </label>
-            <button class="btn primary wide" type="submit">送出訂單</button>
-          </form>
+          <p class="checkout-step-hint">步驟 1／2 ・ 確認商品數量與規格</p>
+          <button class="btn primary wide" type="button" data-checkout-next>下一步：填寫付款與寄送</button>
         </aside>
       </section>
+      ${paymentModalMarkup(totals.total)}
     `;
+  }
+
+  // 結帳付款／寄送的懸浮視窗（步驟 2）。total 用於分期試算與顯示。
+  function paymentModalMarkup(total) {
+    const instOptions = INSTALLMENT_OPTIONS.map((n) => `<option value="${n}">${n} 期</option>`).join("");
+    return `
+      <div class="sys-modal checkout-modal" data-checkout-modal hidden>
+        <div class="sys-modal-overlay" data-checkout-close></div>
+        <div class="sys-modal-card checkout-card">
+          <div class="sys-modal-head">
+            <div><h3>結帳 ・ 付款與寄送</h3><p>步驟 2／2 ・ 確認收件資訊並選擇付款方式</p></div>
+            <button class="sys-modal-close" type="button" data-checkout-close aria-label="關閉">×</button>
+          </div>
+          <form data-payment-form data-checkout-total="${total}">
+            <div class="pay-section">
+              <h4>收件資訊</h4>
+              <div class="sys-form two">
+                <div class="sys-field"><label>收件姓名</label><input name="name" required placeholder="王小明"></div>
+                <div class="sys-field"><label>電子郵件</label><input name="email" type="email" required placeholder="hello@example.com"></div>
+                <div class="sys-field full"><label>配送方式</label>
+                  <select name="shipping"><option>宅配到府</option><option>超商取貨</option><option>實驗室自取</option></select>
+                </div>
+              </div>
+            </div>
+
+            <div class="pay-section">
+              <h4>付款方式</h4>
+              <div class="pay-methods">
+                <label class="pay-method"><input type="radio" name="payMethod" value="貨到付款" checked><span>貨到付款</span></label>
+                <label class="pay-method"><input type="radio" name="payMethod" value="ATM轉帳"><span>ATM 轉帳</span></label>
+                <label class="pay-method"><input type="radio" name="payMethod" value="信用卡"><span>信用卡</span></label>
+                <label class="pay-method"><input type="radio" name="payMethod" value="信用卡分期"><span>信用卡分期</span></label>
+              </div>
+
+              <div class="pay-panel" data-pay-for="貨到付款">
+                <p class="pay-note">商品送達時以現金付款，無需事先付款。</p>
+              </div>
+              <div class="pay-panel" data-pay-for="ATM轉帳" hidden>
+                <p class="pay-note">請於下單後 3 日內，將訂單金額轉帳至下列虛擬帳號：</p>
+                <div class="atm-box"><span>${ATM_ACCOUNT.bank}</span><strong>${ATM_ACCOUNT.account}</strong></div>
+              </div>
+              <div class="pay-panel" data-pay-card hidden>
+                <div class="sys-form two">
+                  <div class="sys-field full"><label>卡號</label><input data-card-number inputmode="numeric" autocomplete="cc-number" placeholder="1234 5678 9012 3456"></div>
+                  <div class="sys-field full"><label>持卡人姓名</label><input data-card-name autocomplete="cc-name" placeholder="王小明 / WANG XIAO MING"></div>
+                  <div class="sys-field"><label>有效期限（月／年）</label><input data-card-expiry inputmode="numeric" autocomplete="cc-exp" placeholder="MM/YY"></div>
+                  <div class="sys-field"><label>安全碼 CVV</label><input data-card-cvv inputmode="numeric" autocomplete="cc-csc" placeholder="末三碼"></div>
+                </div>
+              </div>
+              <div class="pay-panel" data-pay-installment hidden>
+                <div class="sys-form two">
+                  <div class="sys-field"><label>分期期數（0 利率）</label><select data-installment>${instOptions}</select></div>
+                  <div class="sys-field"><label>每期金額</label><div class="inst-info" data-inst-info></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="pay-total"><span>應付總額</span><strong>${formatPrice(total)}</strong></div>
+            <p class="form-error" data-payment-error></p>
+            <div class="sys-modal-actions">
+              <button type="button" class="btn ghost" data-checkout-close>上一步</button>
+              <button type="submit" class="btn primary">送出訂單</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+  }
+
+  // 依付款方式顯示對應欄位面板。
+  function updatePaymentPanels(method) {
+    const modal = document.querySelector("[data-checkout-modal]");
+    if (!modal) return;
+    modal.querySelectorAll("[data-pay-for]").forEach((panel) => {
+      panel.hidden = panel.dataset.payFor !== method;
+    });
+    const showCard = method === "信用卡" || method === "信用卡分期";
+    const cardPanel = modal.querySelector("[data-pay-card]");
+    if (cardPanel) cardPanel.hidden = !showCard;
+    const instPanel = modal.querySelector("[data-pay-installment]");
+    if (instPanel) instPanel.hidden = method !== "信用卡分期";
+    if (method === "信用卡分期") updateInstallmentInfo();
+  }
+
+  // 更新分期每期金額顯示。
+  function updateInstallmentInfo() {
+    const form = document.querySelector("[data-payment-form]");
+    const sel = document.querySelector("[data-installment]");
+    const info = document.querySelector("[data-inst-info]");
+    if (!form || !sel || !info) return;
+    const total = Number(form.dataset.checkoutTotal) || 0;
+    const periods = Number(sel.value) || INSTALLMENT_OPTIONS[0];
+    info.innerHTML = `<strong>${formatPrice(installmentPerPayment(total, periods))}</strong> × ${periods} 期`;
+  }
+
+  // 送出付款表單：驗證 → 建立訂單 → 導向成功頁。
+  function submitPayment(form) {
+    const cart = getCart();
+    if (!cart.length) return;
+    const errorEl = form.querySelector("[data-payment-error]");
+    const setError = (msg) => { if (errorEl) errorEl.textContent = msg || ""; };
+    setError("");
+
+    const data = new FormData(form);
+    const customer = {
+      name: String(data.get("name") || "").trim(),
+      email: String(data.get("email") || "").trim(),
+      shipping: String(data.get("shipping") || "").trim()
+    };
+    const method = String(data.get("payMethod") || "貨到付款");
+    const total = Number(form.dataset.checkoutTotal) || 0;
+    const payment = { method };
+
+    if (method === "ATM轉帳") {
+      payment.atmBank = ATM_ACCOUNT.bank;
+      payment.atmAccount = ATM_ACCOUNT.account;
+    } else if (method === "信用卡" || method === "信用卡分期") {
+      const numberDigits = (form.querySelector("[data-card-number]")?.value || "").replace(/\D/g, "");
+      const cardName = (form.querySelector("[data-card-name]")?.value || "").trim();
+      const expiry = (form.querySelector("[data-card-expiry]")?.value || "").trim();
+      const cvv = (form.querySelector("[data-card-cvv]")?.value || "").replace(/\D/g, "");
+
+      if (numberDigits.length !== 16) { setError("卡號需為 16 碼數字"); return; }
+      if (!cardName) { setError("請輸入持卡人姓名"); return; }
+      const expMatch = expiry.match(/^(\d{2})\/(\d{2})$/);
+      if (!expMatch || Number(expMatch[1]) < 1 || Number(expMatch[1]) > 12) { setError("有效期限格式為 MM/YY（月份 01–12）"); return; }
+      if (cvv.length !== 3) { setError("安全碼 CVV 需為 3 碼數字"); return; }
+
+      payment.cardLast4 = numberDigits.slice(-4);
+      payment.cardName = cardName;
+      payment.cardExpiry = expiry;
+
+      if (method === "信用卡分期") {
+        const periods = Number((form.querySelector("[data-installment]") || {}).value) || INSTALLMENT_OPTIONS[0];
+        payment.installmentPeriods = periods;
+        payment.installmentPerPayment = installmentPerPayment(total, periods);
+        payment.installmentRate = 0;
+      }
+    }
+
+    const order = createOrder(cart, customer, payment);
+    const saved = getOrders().some((entry) => entry.id === order.id);
+    if (!saved) { setError("訂單建立失敗，資料未能寫入瀏覽器，請再試一次"); return; }
+    toast(`${customer.name}，訂單 ${order.id} 已建立`);
+    saveCart([]);
+    window.location.href = `order-success.html?order=${encodeURIComponent(order.id)}`;
+  }
+
+  // 成功頁的付款區塊；ATM 轉帳會醒目顯示虛擬匯款帳號。
+  function paymentSuccessBlock(order) {
+    const p = order.payment || { method: "貨到付款" };
+    let body = "";
+    if (p.method === "ATM轉帳") {
+      body = `
+        <p class="pay-note">請於 3 日內完成轉帳（金額 ${formatPrice(order.total)}），並保留交易紀錄：</p>
+        <div class="atm-box"><span>${escapeHtml(p.atmBank || ATM_ACCOUNT.bank)}</span><strong>${escapeHtml(p.atmAccount || ATM_ACCOUNT.account)}</strong></div>`;
+    } else if (p.method === "信用卡") {
+      body = `<p>已以信用卡付款（末四碼 •••• ${escapeHtml(p.cardLast4 || "")}，到期 ${escapeHtml(p.cardExpiry || "")}）。</p>`;
+    } else if (p.method === "信用卡分期") {
+      body = `<p>信用卡分期：${p.installmentPeriods} 期，每期 ${formatPrice(p.installmentPerPayment)}（0 利率，末四碼 •••• ${escapeHtml(p.cardLast4 || "")}）。</p>`;
+    } else {
+      body = `<p>貨到付款：商品送達時付款 ${formatPrice(order.total)}。</p>`;
+    }
+    return `<div class="success-pay"><h3>付款方式：${escapeHtml(p.method)}</h3>${body}</div>`;
   }
 
   function renderOrderSuccess() {
@@ -588,6 +782,7 @@
           <div><span>配送方式</span><strong>${escapeHtml(order.customer.shipping || "未填寫")}</strong></div>
           <div><span>總金額</span><strong>${formatPrice(order.total)}</strong></div>
         </div>
+        ${paymentSuccessBlock(order)}
         <div class="order-items">
           ${order.items
             .map(
@@ -737,7 +932,9 @@
           <div><span>Email</span><strong>${escapeHtml(order.customer.email || "未填寫")}</strong></div>
           <div><span>配送</span><strong>${escapeHtml(order.customer.shipping || "未填寫")}</strong></div>
           <div><span>狀態</span><strong class="status-pill ${statusClass(order.status)}">${order.status}</strong></div>
+          <div><span>付款方式</span><strong>${escapeHtml(order.payment ? order.payment.method : "—")}</strong></div>
         </div>
+        <div class="order-pay-detail"><span>付款明細</span> ${escapeHtml(paymentSummary(order.payment))}</div>
         <div class="order-items">
           ${order.items
             .map(
@@ -838,11 +1035,11 @@
       return;
     }
 
-    const headers = ["訂單編號", "下單時間", "顧客姓名", "Email", "配送方式", "商品名稱", "規格", "數量", "單價", "小計", "訂單總金額", "訂單狀態"];
+    const headers = ["訂單編號", "下單時間", "顧客姓名", "Email", "配送方式", "付款方式", "付款明細", "商品名稱", "規格", "數量", "單價", "小計", "訂單總金額", "訂單狀態"];
     const rows = [headers];
 
     // 一筆訂單含多項商品時：分成多列、重複同一訂單編號與訂單層級資訊；
-    // 「訂單總金額」只放在該訂單的第一列（其餘留空），避免在 Excel 加總時重複計算。
+    // 「付款方式／付款明細／訂單總金額」只放在該訂單的第一列（其餘留空），避免加總時重複計算。
     orders.forEach((order) => {
       const items = Array.isArray(order.items) && order.items.length ? order.items : [{}];
       const createdAt = formatExcelDateTime(order.createdAt);
@@ -854,6 +1051,8 @@
           customer.name || "",
           customer.email || "",
           customer.shipping || "",
+          index === 0 ? (order.payment ? order.payment.method : "") : "",
+          index === 0 ? paymentSummary(order.payment) : "",
           item.name || "",
           buildSpecText(item),
           Number(item.quantity) || 0,
@@ -888,7 +1087,7 @@
     });
 
     // 金額欄（單價/小計/訂單總金額）套千分位格式。
-    const currencyCols = [8, 9, 10];
+    const currencyCols = [10, 11, 12];
     for (let r = 1; r < rows.length; r += 1) {
       currencyCols.forEach((c) => {
         const cell = worksheet[XLSX.utils.encode_cell({ r, c })];
@@ -1015,6 +1214,20 @@
         toast(`${downloadButton.dataset.download} 已開始下載`);
       }
 
+      // 結帳步驟二：開啟付款／寄送懸浮視窗
+      if (event.target.closest("[data-checkout-next]")) {
+        const modal = document.querySelector("[data-checkout-modal]");
+        if (modal) {
+          modal.hidden = false;
+          updatePaymentPanels((document.querySelector("[name='payMethod']:checked") || {}).value || "貨到付款");
+        }
+      }
+      // 關閉付款視窗（遮罩 / × / 上一步）
+      if (event.target.closest("[data-checkout-close]")) {
+        const modal = document.querySelector("[data-checkout-modal]");
+        if (modal) modal.hidden = true;
+      }
+
       const orderButton = event.target.closest("[data-order-open]");
       if (orderButton) {
         activeOrderId = orderButton.dataset.orderOpen;
@@ -1065,26 +1278,34 @@
       if (statusControl) {
         updateOrderStatus(statusControl.dataset.orderStatus, statusControl.value);
       }
+      // 切換付款方式 → 顯示對應欄位
+      if (event.target.matches("[name='payMethod']")) {
+        updatePaymentPanels(event.target.value);
+      }
+      // 切換分期期數 → 更新每期金額
+      if (event.target.matches("[data-installment]")) {
+        updateInstallmentInfo();
+      }
+    });
+
+    // 信用卡欄位即時格式化：卡號每 4 碼空格、到期 MM/YY、CVV 限 3 碼。
+    document.addEventListener("input", (event) => {
+      const node = event.target;
+      if (node.matches("[data-card-number]")) {
+        node.value = formatCardNumber(node.value);
+      } else if (node.matches("[data-card-expiry]")) {
+        const isDelete = typeof event.inputType === "string" && event.inputType.indexOf("delete") === 0;
+        node.value = formatExpiry(node.value, isDelete);
+      } else if (node.matches("[data-card-cvv]")) {
+        node.value = formatCvv(node.value);
+      }
     });
 
     const checkout = document.querySelector("[data-cart-view]");
     checkout?.addEventListener("submit", (event) => {
-      if (!event.target.matches("[data-checkout-form]")) return;
+      if (!event.target.matches("[data-payment-form]")) return;
       event.preventDefault();
-      const cart = getCart();
-      if (!cart.length) return;
-      const formData = new FormData(event.target);
-      const order = createOrder(cart, formData);
-      // 寫入後驗證：再次從 localStorage 確認訂單確實存在，才視為下單成功並導向成功頁。
-      // 若寫入失敗（例如無痕模式 / 容量已滿），就停在購物車並提示，不清空購物車。
-      const saved = getOrders().some((entry) => entry.id === order.id);
-      if (!saved) {
-        toast("訂單建立失敗，資料未能寫入瀏覽器，請再試一次");
-        return;
-      }
-      toast(`${formData.get("name")}，訂單 ${order.id} 已建立`);
-      saveCart([]);
-      window.location.href = `order-success.html?order=${encodeURIComponent(order.id)}`;
+      submitPayment(event.target);
     });
 
     const adminLogin = document.querySelector("[data-admin-login]");
@@ -1113,9 +1334,64 @@
     });
   }
 
+  // 首頁 Hero 輪播：原圖 + 三部影片共 4 張，每張 10 秒自動換、循環，可用左右鍵/圓點手動切換。
+  function setupHeroCarousel() {
+    const root = document.querySelector("[data-hero-carousel]");
+    if (!root) return;
+    const slides = Array.from(root.querySelectorAll(".hero-slide"));
+    if (slides.length <= 1) return;
+    const dotsWrap = root.querySelector("[data-hero-dots]");
+    const DURATION = 10000;
+    let index = 0;
+    let timer = null;
+
+    if (dotsWrap) {
+      dotsWrap.innerHTML = slides
+        .map((_, i) => `<button class="hero-dot ${i === 0 ? "is-active" : ""}" type="button" data-hero-go="${i}" aria-label="第 ${i + 1} 張"></button>`)
+        .join("");
+    }
+
+    function show(target) {
+      index = (target + slides.length) % slides.length;
+      slides.forEach((slide, i) => {
+        const active = i === index;
+        slide.classList.toggle("is-active", active);
+        const video = slide.querySelector("video");
+        if (video) {
+          if (active) {
+            try { video.currentTime = 0; } catch (e) { /* 部分瀏覽器尚未可設定 */ }
+            const played = video.play();
+            if (played && played.catch) played.catch(() => {});
+          } else {
+            video.pause();
+          }
+        }
+      });
+      if (dotsWrap) {
+        dotsWrap.querySelectorAll(".hero-dot").forEach((dot, i) => dot.classList.toggle("is-active", i === index));
+      }
+    }
+
+    function restart() {
+      window.clearInterval(timer);
+      timer = window.setInterval(() => show(index + 1), DURATION);
+    }
+
+    root.addEventListener("click", (event) => {
+      if (event.target.closest("[data-hero-next]")) { show(index + 1); restart(); return; }
+      if (event.target.closest("[data-hero-prev]")) { show(index - 1); restart(); return; }
+      const goButton = event.target.closest("[data-hero-go]");
+      if (goButton) { show(Number(goButton.dataset.heroGo)); restart(); }
+    });
+
+    show(0);
+    restart();
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     updateCartBadge();
     markActiveNav();
+    setupHeroCarousel();
     renderFeatured();
     renderProductGrid();
     renderStoreProducts();
