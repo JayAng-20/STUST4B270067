@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>ROK 後台管理系統 | ROK Tech</title>
     <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="assets/css/styles.css?v=20260621">
+    <link rel="stylesheet" href="assets/css/styles.css?v=20260622">
   </head>
   <body class="admin-body">
     <main class="admin-shell system-shell">
@@ -175,7 +175,7 @@
           <div class="sys-field"><label>性別</label><select data-emp-field="gender"><option value="">—請選擇—</option><option>男</option><option>女</option><option>其他</option></select></div>
           <div class="sys-field"><label>職位</label><input data-emp-field="position"></div>
           <div class="sys-field"><label>部門</label><input data-emp-field="department"></div>
-          <div class="sys-field"><label>薪資</label><input data-emp-field="salary" placeholder="如 100,000 USD"></div>
+          <div class="sys-field"><label>薪資</label><input data-emp-field="salary" inputmode="numeric" placeholder="輸入數字，自動轉 1,000 USD"></div>
           <div class="sys-field"><label>入職日期</label><input data-emp-field="hireDate" placeholder="YYYY/MM/DD"></div>
           <div class="sys-field"><label>電話</label><input data-emp-field="phone" placeholder="09xxxxxxxx"></div>
           <div class="sys-field full"><label>住家地址</label><input data-emp-field="address"></div>
@@ -206,8 +206,8 @@
 
     <!-- SheetJS（支援樣式的相容版 xlsx-js-style，同 XLSX API）：三個分頁的匯出共用，可套用粗體標題 -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-    <script src="assets/js/data.js?v=20260621"></script>
-    <script src="assets/js/app.js?v=20260621"></script>
-    <script src="assets/js/system.js?v=20260621"></script>
+    <script src="assets/js/data.js?v=20260622"></script>
+    <script src="assets/js/app.js?v=20260622"></script>
+    <script src="assets/js/system.js?v=20260622"></script>
   </body>
 </html>

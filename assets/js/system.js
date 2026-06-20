@@ -32,6 +32,27 @@
     return "<article><span>" + escapeHtml(label) + "</span><strong" + (alert ? ' class="alert"' : "") + ">" + escapeHtml(value) + "</strong></article>";
   }
 
+  // 薪資輸入即時格式化：只留數字、每 3 位一個逗號（例如 1000 → 1,000）。
+  function formatSalaryInput(value) {
+    const digits = String(value || "").replace(/\D/g, "");
+    return digits ? Number(digits).toLocaleString("en-US") : "";
+  }
+  // 儲存時的薪資：數字加千分位再補「 USD」（例如 100000 → 100,000 USD）；空白維持空白（視為未填）。
+  function formatSalaryForSave(value) {
+    const digits = String(value || "").replace(/\D/g, "");
+    return digits ? Number(digits).toLocaleString("en-US") + " USD" : "";
+  }
+  // 入職日期輸入：YYYY/MM/DD，輸入滿 4 碼(年)自動補「/」、滿 6 碼(月)再補「/」；刪除時不自動補。
+  function formatHireDate(value, isDelete) {
+    const d = String(value || "").replace(/\D/g, "").slice(0, 8);
+    if (d.length <= 4) return d.length === 4 && !isDelete ? d + "/" : d;
+    if (d.length <= 6) {
+      const base = d.slice(0, 4) + "/" + d.slice(4);
+      return d.length === 6 && !isDelete ? base + "/" : base;
+    }
+    return d.slice(0, 4) + "/" + d.slice(4, 6) + "/" + d.slice(6);
+  }
+
   // ---------- 樣式化 Toast（取代瀏覽器原生 alert）----------
   function showToast(message, kind) {
     const wrap = document.querySelector("[data-toast-wrap]");
@@ -306,7 +327,30 @@
     { empId: "4B270070", name: "鄭家慶", gender: "男", position: "行銷經理", department: "行銷部", salary: "100,000 USD", hireDate: "2026/1/1", phone: "0900000002", address: "台北市信義區信義路五段9號", isFounder: true }
   ];
 
+  // 一次性種子：一般員工（可被開除）。已存在的使用者也會在載入時補上一次，之後若被開除不會再自動加回。
+  const EXTRA_SEED = [
+    { empId: "00000001", name: "川普", gender: "男", position: "投顧", department: "決策部", salary: "100,000 USD", hireDate: "2026/6/2", phone: "00000000", address: "America", isFounder: false }
+  ];
+  const SEED_FLAG = "rokEmpSeedExtra_v1";
+
   function genUid() { return "emp-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7); }
+
+  // 載入時補種子員工一次（用 flag 記錄，避免被開除後又自動冒出來）。
+  function seedExtraEmployees() {
+    let done = false;
+    try { done = localStorage.getItem(SEED_FLAG) === "true"; } catch (e) { done = false; }
+    if (done) return;
+    const list = getEmployees(); // 會先確保三位創始成員存在
+    let changed = false;
+    EXTRA_SEED.forEach((seed) => {
+      if (!list.some((e) => e.empId === seed.empId)) {
+        list.push(Object.assign({ _uid: genUid() }, seed));
+        changed = true;
+      }
+    });
+    if (changed) saveEmployees(list);
+    try { localStorage.setItem(SEED_FLAG, "true"); } catch (e) { /* 隱私模式忽略 */ }
+  }
 
   function getEmployees() {
     let list = null;
@@ -375,6 +419,8 @@
     if (!form) return;
     const emp = { _uid: genUid(), isFounder: false };
     form.querySelectorAll("[data-emp-field]").forEach((input) => { emp[input.dataset.empField] = String(input.value || "").trim(); });
+    // 薪資統一存成「千分位 + USD」（例如 100,000 USD）；空白維持空白以利「資料不完整」判斷。
+    emp.salary = formatSalaryForSave(emp.salary);
     const list = getEmployees();
     list.push(emp); // 即使有欄位空白仍要儲存成功（不阻擋）
     saveEmployees(list);
@@ -492,9 +538,21 @@
       }
     });
 
+    // 員工欄位即時格式化：薪資加千分位、入職日期自動補斜線。
+    document.addEventListener("input", (e) => {
+      const node = e.target;
+      if (node.matches && node.matches('[data-emp-field="salary"]')) {
+        node.value = formatSalaryInput(node.value);
+      } else if (node.matches && node.matches('[data-emp-field="hireDate"]')) {
+        const isDelete = typeof e.inputType === "string" && e.inputType.indexOf("delete") === 0;
+        node.value = formatHireDate(node.value, isDelete);
+      }
+    });
+
     setupTabs();
     setupInventory();
     setupEmployees();
+    seedExtraEmployees(); // 補上一般員工種子（川普），一次性
     renderInventory();  // 首次載入：若無 rokInventory 會建立全部組合
     renderEmployees();  // 首次載入：若無 rokEmployees 會寫入三位創始成員
     setupSync();

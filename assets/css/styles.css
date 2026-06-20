@@ -1469,7 +1469,10 @@ dd {
   text-align: left; font-weight: 800; white-space: nowrap;
   padding: 12px 14px;
 }
-.sys-table tbody td { padding: 11px 14px; border-top: 1px solid var(--line); vertical-align: middle; }
+.sys-table tbody td { padding: 11px 14px; border-top: 1px solid var(--line); vertical-align: middle; white-space: nowrap; }
+/* 空間夠時同列不換行；只有「住家地址、資料狀態」這類長文字才允許換行，視窗太窄時整表改用水平捲動。 */
+[data-panel="employees"] .sys-table td:nth-child(9),
+[data-panel="employees"] .sys-table td:nth-child(11) { white-space: normal; min-width: 150px; }
 .sys-table tbody tr:hover { background: var(--soft); }
 .sys-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
