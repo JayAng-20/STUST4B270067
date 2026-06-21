@@ -1580,3 +1580,50 @@ dd {
 @media (max-width: 720px) {
   .pay-methods { grid-template-columns: 1fr; }
 }
+
+/* ===================== 社群連結 about.html ===================== */
+.social-intro {
+  margin: 0 0 22px;
+  max-width: 640px;
+  color: var(--muted);
+}
+.social-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.social-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.social-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow);
+  border-color: transparent;
+}
+.social-icon {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.social-icon svg { width: 26px; height: 26px; }
+.social-icon.fb { background: #1877f2; }
+.social-icon.ig { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%); }
+.social-icon.line { background: #06c755; }
+.social-meta { display: flex; flex-direction: column; line-height: 1.35; min-width: 0; }
+.social-name { font-weight: 800; }
+.social-handle { color: var(--muted); font-size: 0.85rem; word-break: break-word; }
+@media (max-width: 760px) {
+  .social-strip { grid-template-columns: 1fr; }
+}
