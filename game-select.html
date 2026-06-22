@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>選擇你的挑戰 | ROK Tech</title>
+    <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="assets/css/styles.css?v=20260624">
+    <style>
+      /* ===== 遊戲選擇頁專用樣式（沿用全站變數）===== */
+      .pick-hero { background: radial-gradient(120% 120% at 50% 0%, #1d2230 0%, #121519 60%, #0d0f13 100%); color: #fff; }
+      .pick-hero .page-hero-inner { text-align: center; }
+      .pick-hero .eyebrow { color: #ffd45e; }
+      .pick-hero p { color: rgba(255,255,255,0.72); max-width: 620px; margin-inline: auto; }
+
+      .game-pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; max-width: 1000px; margin: 0 auto; }
+      .pick-card { position: relative; display: flex; flex-direction: column; overflow: hidden;
+        border: 1px solid var(--line); border-radius: 18px; background: #fff; text-decoration: none; color: var(--ink);
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+      .pick-card:hover { transform: scale(1.025); box-shadow: var(--shadow); border-color: transparent; }
+      .pick-art { height: 188px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+      .pick-art svg { width: 100%; height: 100%; display: block; }
+      .pick-body { padding: 22px 24px 26px; }
+      .pick-tag { display: inline-block; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+        color: var(--amber); margin-bottom: 6px; }
+      .pick-body h2 { margin: 0 0 8px; font-size: 1.5rem; }
+      .pick-body p { margin: 0 0 16px; color: var(--muted); }
+      .pick-cta { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; color: var(--ink); }
+      .pick-card:hover .pick-cta { color: var(--amber); }
+      .pick-cta .arrow { transition: transform 0.18s ease; }
+      .pick-card:hover .pick-cta .arrow { transform: translateX(4px); }
+      .pick-feats { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px; }
+      .pick-feats span { font-size: 0.74rem; font-weight: 700; color: #3b424a; background: var(--soft);
+        border-radius: 999px; padding: 4px 10px; }
+      .back-row { max-width: 1000px; margin: 28px auto 0; text-align: center; }
+      .back-row a { color: var(--muted); font-weight: 700; }
+      .back-row a:hover { color: var(--ink); }
+
+      @media (max-width: 760px) { .game-pick { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="index.html"><span class="brand-mark">ROK</span><span>ROK Tech<small>Rice on Keyboard Tech</small></span></a>
+        <nav class="nav" aria-label="主選單">
+          <a href="index.html">首頁</a><a href="products.html">產品</a><a href="software.html">軟體</a><a href="downloads.html">軟體下載</a><a href="news.html">最新資訊</a><a href="store.html">商店</a><a href="about.html">關於我們</a><a href="game-select.html" class="is-active">鍵盤挑戰</a><a class="cart-link" href="cart.html">購物車 <span class="cart-count" data-cart-count>0</span></a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-hero pick-hero">
+        <div class="page-hero-inner">
+          <p class="eyebrow">Choose Your Challenge</p>
+          <h1>選擇你的挑戰</h1>
+          <p>兩種玩法，一樣的 ROK Tech 風格。練手速，或上賽道飆速 —— 你決定。</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="game-pick">
+
+          <!-- 卡片 A：鍵帽雨 -->
+          <a class="pick-card" href="game.html">
+            <div class="pick-art" style="background: radial-gradient(120% 120% at 50% 0%, #222a37, #11141a);">
+              <svg viewBox="0 0 400 188" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <g font-family="Inter, Arial" font-weight="800" fill="#1b1e25">
+                  <g transform="translate(70 30)"><rect width="46" height="46" rx="9" fill="#fbfaf6" stroke="rgba(0,0,0,0.18)"/><text x="23" y="31" text-anchor="middle" font-size="22">R</text></g>
+                  <g transform="translate(180 14)"><rect width="46" height="46" rx="9" fill="#fbfaf6" stroke="rgba(0,0,0,0.18)"/><text x="23" y="31" text-anchor="middle" font-size="22">O</text></g>
+                  <g transform="translate(290 40)"><rect width="46" height="46" rx="9" fill="#fbfaf6" stroke="rgba(0,0,0,0.18)"/><text x="23" y="31" text-anchor="middle" font-size="22">K</text></g>
+                  <g transform="translate(130 96)"><rect width="46" height="46" rx="9" fill="#efe5d2" stroke="rgba(0,0,0,0.18)"/><text x="23" y="31" text-anchor="middle" font-size="22">A</text></g>
+                  <g transform="translate(238 104)"><rect width="46" height="46" rx="9" fill="#efe5d2" stroke="rgba(0,0,0,0.18)"/><text x="23" y="31" text-anchor="middle" font-size="22">Z</text></g>
+                </g>
+              </svg>
+            </div>
+            <div class="pick-body">
+              <span class="pick-tag">打字 ・ 反應</span>
+              <h2>鍵帽雨</h2>
+              <div class="pick-feats"><span>A–Z 擊落</span><span>Combo 連擊</span><span>難度遞增</span></div>
+              <p>印著字母的鍵帽從上方落下，按對應鍵把它擊落。考驗你的手速與準度，分數越高速度越快。</p>
+              <span class="pick-cta">開始打字 <span class="arrow">→</span></span>
+            </div>
+          </a>
+
+          <!-- 卡片 B：ROK 賽道 -->
+          <a class="pick-card" href="game-racing.html">
+            <div class="pick-art" style="background: radial-gradient(120% 120% at 50% 10%, #2a3550, #0e1320);">
+              <svg viewBox="0 0 400 188" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <ellipse cx="200" cy="118" rx="150" ry="46" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="20"/>
+                <ellipse cx="200" cy="118" rx="150" ry="46" fill="none" stroke="rgba(120,200,255,0.5)" stroke-width="3" stroke-dasharray="10 12"/>
+                <g transform="translate(196 92) rotate(8)">
+                  <rect x="-26" y="-12" width="52" height="24" rx="6" fill="#ffcf1f"/>
+                  <rect x="-12" y="-22" width="26" height="14" rx="4" fill="#9fd2ff"/>
+                  <circle cx="-16" cy="13" r="6" fill="#1c1f25"/><circle cx="16" cy="13" r="6" fill="#1c1f25"/>
+                  <rect x="-34" y="-3" width="12" height="6" rx="2" fill="#45d0ff"/>
+                </g>
+                <path d="M150 150 q-30 8 -54 2" stroke="#45d0ff" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.8"/>
+              </svg>
+            </div>
+            <div class="pick-body">
+              <span class="pick-tag">3D ・ 競速</span>
+              <h2>ROK 賽道</h2>
+              <div class="pick-feats"><span>三種車型</span><span>氮氣加速</span><span>對戰 AI</span><span>計圈計時</span></div>
+              <p>真 3D 第三人稱賽車：重機、跑車、貨車手感各異，橢圓 + S 彎賽道、氮氣噴焰、小地圖與名次。</p>
+              <span class="pick-cta">進入賽道 <span class="arrow">→</span></span>
+            </div>
+          </a>
+
+        </div>
+
+        <div class="back-row"><a href="index.html">← 返回首頁</a></div>
+      </section>
+    </main>
+
+    <footer class="site-footer"><div class="footer-inner"><p>© 2026 鍵盤撒米科技有限公司 Rice on Keyboard Tech.</p><div class="footer-links"><a href="products.html">產品</a><a href="downloads.html">下載</a><a href="cart.html">購物車</a></div></div></footer>
+    <script src="assets/js/data.js?v=20260624"></script>
+    <script src="assets/js/app.js?v=20260624"></script>
+  </body>
+</html>

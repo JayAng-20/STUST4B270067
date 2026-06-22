@@ -1,0 +1,18 @@
+{
+  "eightDirections": [0, 45, 90, 135, 180, 225, 270, 315],
+  "fourDirectionFallback": {
+    "0": 0,
+    "45": 0,
+    "90": 90,
+    "135": 90,
+    "180": 180,
+    "225": 180,
+    "270": 270,
+    "315": 270
+  },
+  "filenameTemplates": {
+    "bike": "bike_{angle}.png",
+    "super": "super_{angle}.png",
+    "truck": "truck_{angle}.png"
+  }
+}
