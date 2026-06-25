@@ -132,6 +132,32 @@
         }
       });
       if (changed) Inventory.save(inventory);
+    },
+    // 訂單取消／退回：把該訂單的品項數量加回庫存、已售出減回（applyOrder 的反向）。
+    returnOrder(order) {
+      if (!order || !Array.isArray(order.items)) return;
+      const inventory = Inventory.ensure();
+      if (!Array.isArray(inventory)) return;
+      const map = new Map(inventory.map((rec) => [rec.key, rec]));
+      let changed = false;
+      order.items.forEach((item) => {
+        const qty = Number(item.quantity) || 0;
+        if (qty <= 0) return;
+        const rec = map.get(Inventory.comboKey(item.productId, item.color, item.switchName));
+        if (rec) {
+          rec.stock = (Number(rec.stock) || 0) + qty;
+          rec.sold = Math.max(0, (Number(rec.sold) || 0) - qty);
+          changed = true;
+        }
+      });
+      if (changed) Inventory.save(inventory);
+    },
+    // 把所有組合的庫存還原成初始狀態（庫存 1,000,000、已售出 0）。
+    resetAll() {
+      const inventory = Inventory.ensure();
+      if (!Array.isArray(inventory)) return;
+      inventory.forEach((rec) => { rec.stock = 1000000; rec.sold = 0; });
+      Inventory.save(inventory);
     }
   };
   window.ROKInventory = Inventory;
@@ -965,17 +991,39 @@
     const orders = getOrders();
     const order = orders.find((entry) => entry.id === orderId);
     if (!order) return;
+    const prev = order.status;
     order.status = status;
+
+    // 庫存連動：改為「已取消」→ 數量加回庫存；從「已取消」改回其他狀態 → 再次扣庫存。
+    try {
+      if (status === "已取消" && !order._stockReturned) {
+        Inventory.returnOrder(order);
+        order._stockReturned = true;
+      } else if (prev === "已取消" && status !== "已取消" && order._stockReturned) {
+        Inventory.applyOrder(order);
+        order._stockReturned = false;
+      }
+    } catch (error) {
+      /* 庫存連動失敗不影響訂單狀態更新 */
+    }
+
     saveOrders(orders);
     renderAdminOrders();
+    // 連動刷新 ERP 衍生面板（出貨／物流、財務、儀表板）。
+    if (window.ROKErp && typeof window.ROKErp.refresh === "function") window.ROKErp.refresh();
     toast(`${orderId} 已更新為 ${status}`);
   }
 
   function clearAllOrders() {
     saveOrders([]);
     activeOrderId = "";
+    // 展示用「清除所有訂單」：恢復原始狀態（全部地方）。
+    // 1) 庫存還原為初始（1,000,000 / 已售出 0）；2) ERP 衍生與假資料重置（供應商主檔、採購/出勤/請假/薪資清空）。
+    try { Inventory.resetAll(); } catch (error) { /* 忽略 */ }
+    try { if (window.ROKErp && typeof window.ROKErp.resetAll === "function") window.ROKErp.resetAll(); } catch (error) { /* 忽略 */ }
     renderAdminOrders();
-    toast("所有訂單已清除");
+    if (window.ROKErp && typeof window.ROKErp.refresh === "function") window.ROKErp.refresh();
+    toast("所有訂單已清除，系統已恢復原始狀態");
   }
 
   // 估算字串顯示寬度（中日韓全形字算 2，其餘算 1），給 Excel 欄寬自動調整用。

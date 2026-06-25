@@ -7,67 +7,70 @@
     <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="assets/css/styles.css?v=20260624">
     <style>
-      /* ===== 企業 ERP 後台版面（側邊欄 + 主內容；沿用站台深色系，與 .sys-* 既有元件並用）===== */
-      .erp-layout { display: flex; min-height: calc(100vh - 0px); gap: 0; align-items: stretch; }
-      .erp-sidebar { flex: 0 0 232px; width: 232px; background: #11141b; border-right: 1px solid rgba(255,255,255,0.08);
-        padding: 14px 10px 28px; overflow-y: auto; max-height: calc(100vh - 64px); position: sticky; top: 64px; }
-      .erp-main { flex: 1 1 auto; min-width: 0; padding: 22px 24px 60px; }
+      /* ===== 企業 ERP 後台版面（側邊欄 + 主內容；淺色系，深色僅保留頂部標題列）===== */
+      .erp-layout { display: flex; min-height: calc(100vh - 0px); gap: 0; align-items: stretch; margin-top: 18px;
+        background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+      .erp-sidebar { flex: 0 0 232px; width: 232px; background: #f7f8fa; border-right: 1px solid var(--line);
+        padding: 14px 10px 28px; overflow-y: auto; max-height: calc(100vh - 64px); position: sticky; top: 18px; }
+      .erp-main { flex: 1 1 auto; min-width: 0; padding: 22px 24px 60px; background: #fff; }
       .erp-group { margin-bottom: 6px; }
       .erp-group-title { display: flex; align-items: center; justify-content: space-between; cursor: pointer;
-        font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.42);
+        font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
         padding: 10px 10px 6px; user-select: none; }
       .erp-group-title::after { content: "▾"; font-size: 0.7rem; transition: transform 0.2s; }
       .erp-group.collapsed .erp-group-title::after { transform: rotate(-90deg); }
       .erp-group.collapsed .erp-nav-item { display: none; }
       .erp-nav-item { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; cursor: pointer;
-        background: transparent; border: 0; color: rgba(255,255,255,0.82); font-size: 0.9rem; font-weight: 650;
+        background: transparent; border: 0; color: var(--ink); font-size: 0.9rem; font-weight: 650;
         padding: 9px 11px; border-radius: 9px; margin: 1px 0; border-left: 3px solid transparent; }
-      .erp-nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
-      .erp-nav-item.is-active { background: rgba(184,134,11,0.16); color: #ffd45e; border-left-color: #c89b3c; }
+      .erp-nav-item:hover { background: #eceff3; color: var(--ink); }
+      .erp-nav-item.is-active { background: rgba(184,134,11,0.14); color: #8a6a12; border-left-color: #c89b3c; }
       .erp-nav-item .ic { width: 18px; text-align: center; opacity: 0.9; }
 
       .erp-burger { display: none; background: transparent; border: 1px solid rgba(255,255,255,0.22);
         color: #fff; border-radius: 8px; width: 40px; height: 40px; font-size: 1.2rem; cursor: pointer; }
 
       .erp-page-head { margin: 0 0 16px; }
-      .erp-page-head h2 { margin: 0; font-size: 1.5rem; }
-      .erp-sub { color: rgba(255,255,255,0.55); font-size: 0.85rem; margin: 4px 0 0; }
+      .erp-page-head h2 { margin: 0; font-size: 1.5rem; color: var(--ink); }
+      .erp-sub { color: var(--muted); font-size: 0.85rem; margin: 4px 0 0; }
       .erp-kpi { margin-bottom: 18px; }
       .erp-kpi-6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
       .erp-ops { white-space: nowrap; display: flex; gap: 6px; }
 
-      /* 儀表板卡片 + 簡易圖表（純 CSS，無外部圖表庫） */
+      /* 儀表板卡片 + 簡易圖表（純 CSS，淺底深字） */
       .erp-dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-      .erp-card { background: #181b22; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px 18px; }
-      .erp-card h3 { margin: 0 0 12px; font-size: 1rem; }
+      .erp-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: 0 6px 18px rgba(18,19,21,0.05); }
+      .erp-card h3 { margin: 0 0 12px; font-size: 1rem; color: var(--ink); }
       .erp-card-wide { grid-column: 1 / -1; }
-      .erp-bar-row { display: grid; grid-template-columns: 120px 1fr 48px; align-items: center; gap: 10px; margin: 7px 0; font-size: 0.85rem; }
-      .erp-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgba(255,255,255,0.85); }
-      .erp-bar { background: rgba(255,255,255,0.08); border-radius: 999px; height: 12px; overflow: hidden; }
+      .erp-bar-row { display: grid; grid-template-columns: 170px 1fr 64px; align-items: center; gap: 10px; margin: 7px 0; font-size: 0.85rem; }
+      .erp-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+      .erp-bar { background: #e9ecf0; border-radius: 999px; height: 12px; overflow: hidden; }
       .erp-bar i { display: block; height: 100%; background: linear-gradient(90deg, #b8860b, #ffd45e); border-radius: 999px; }
-      .erp-bar-val { text-align: right; font-variant-numeric: tabular-nums; color: rgba(255,255,255,0.7); }
+      .erp-bar-val { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
       .erp-trend { display: flex; align-items: flex-end; gap: 10px; height: 150px; padding-top: 8px; }
       .erp-trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 6px; }
       .erp-trend-bar { width: 70%; min-height: 4px; background: linear-gradient(180deg, #ffd45e, #b8860b); border-radius: 6px 6px 0 0; }
-      .erp-trend-x { font-size: 0.72rem; color: rgba(255,255,255,0.5); }
+      .erp-trend-x { font-size: 0.72rem; color: var(--muted); }
 
-      .erp-report-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
-      .erp-report-card { background: #181b22; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px 18px; }
-      .erp-report-card h3 { margin: 0 0 4px; font-size: 1.02rem; }
-      .erp-report-actions { display: flex; gap: 8px; margin-top: 12px; }
+      /* 儀表板卡片內的表格：淺底深字（修正原本黑底黑字看不到的問題） */
+      .erp-card .sys-table { min-width: 0; }
 
-      .erp-main textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.16);
-        color: #fff; border-radius: 8px; padding: 8px 10px; font: inherit; }
+      .erp-main textarea { width: 100%; background: #fff; border: 1px solid var(--line);
+        color: var(--ink); border-radius: 8px; padding: 8px 10px; font: inherit; }
+
+      /* 覆寫共用深色元件：資料表頭（原為深底白字）→ 淺底深字，避免「黑底」 */
+      .system-shell .sys-table thead th { background: var(--soft); color: var(--ink); border-bottom: 2px solid var(--line); }
 
       @media (max-width: 920px) {
         .erp-kpi-6 { grid-template-columns: repeat(3, 1fr); }
         .erp-dash-grid { grid-template-columns: 1fr; }
       }
       @media (max-width: 760px) {
+        .erp-layout { border-radius: 12px; }
         .erp-burger { display: inline-flex; align-items: center; justify-content: center; }
         .erp-sidebar { position: fixed; top: 0; left: 0; bottom: 0; max-height: none; z-index: 60; width: 240px;
           transform: translateX(-100%); transition: transform 0.25s ease; padding-top: 70px; }
-        .erp-layout.nav-open .erp-sidebar { transform: translateX(0); box-shadow: 0 0 40px rgba(0,0,0,0.6); }
+        .erp-layout.nav-open .erp-sidebar { transform: translateX(0); box-shadow: 0 0 40px rgba(0,0,0,0.25); }
         .erp-kpi-6 { grid-template-columns: 1fr 1fr; }
         .erp-main { padding: 16px 14px 50px; }
       }
@@ -84,7 +87,7 @@
         <div>
           <p class="eyebrow">Back Office</p>
           <h1>後台管理系統登入</h1>
-          <p>企業級 ERP 後台：訂單、出貨、庫存、採購、人資、財務、報表一站整合。此頁與前台分開，公開網站不會出現入口。</p>
+          <p>企業級 ERP 後台：訂單、出貨、庫存、採購、人資、財務一站整合。此頁與前台分開，公開網站不會出現入口。</p>
         </div>
         <form data-admin-login>
           <label>系統密碼
@@ -142,11 +145,6 @@
             <div class="erp-group">
               <div class="erp-group-title">財務</div>
               <button class="erp-nav-item" data-nav="finance"><span class="ic">📊</span>財務管理</button>
-            </div>
-            <div class="erp-group">
-              <div class="erp-group-title">報表與文件</div>
-              <button class="erp-nav-item" data-nav="reports"><span class="ic">📈</span>報表分析</button>
-              <button class="erp-nav-item" data-nav="documents"><span class="ic">📁</span>文件／合約管理</button>
             </div>
           </aside>
 
@@ -260,13 +258,11 @@
               </div>
             </section>
 
-            <!-- 〔新增〕出勤 / 請假 / 薪資 / 財務 / 報表 / 文件 -->
+            <!-- 〔新增〕出勤 / 請假 / 薪資 / 財務 -->
             <section class="sys-panel" data-panel="attendance" role="tabpanel" hidden></section>
             <section class="sys-panel" data-panel="leaves" role="tabpanel" hidden></section>
             <section class="sys-panel" data-panel="payroll" role="tabpanel" hidden></section>
             <section class="sys-panel" data-panel="finance" role="tabpanel" hidden></section>
-            <section class="sys-panel" data-panel="reports" role="tabpanel" hidden></section>
-            <section class="sys-panel" data-panel="documents" role="tabpanel" hidden></section>
           </main>
         </div>
       </section>
@@ -372,8 +368,8 @@
     <!-- SheetJS（xlsx-js-style，支援樣式）：訂單/庫存/員工/ERP 各模組匯出共用 -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <script src="assets/js/data.js?v=20260624"></script>
-    <script src="assets/js/app.js?v=20260624"></script>
+    <script src="assets/js/app.js?v=20260625"></script>
     <script src="assets/js/system.js?v=20260624"></script>
-    <script src="assets/js/erp.js?v=20260625"></script>
+    <script src="assets/js/erp.js?v=20260625b"></script>
   </body>
 </html>
