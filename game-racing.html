@@ -206,6 +206,7 @@
           <div>
             <h2 style="margin-top:0;">② 圈數模式</h2>
             <div class="seg" id="segLaps">
+              <button data-laps="1">固定 1 圈</button>
               <button data-laps="2">固定 2 圈</button>
               <button data-laps="3" class="sel">固定 3 圈</button>
               <button data-laps="0">無限圈・計時挑戰</button>
@@ -276,15 +277,15 @@
       // brake 煞車力 / coast 鬆油摩擦(越小滑越遠=慣性大) / nitroMult 氮氣推力 / nitroDur 氮氣秒數
       var CARS = {
         bike:  { key:"bike",  name:"Motorcycle", role:"輕・靈・刺激難控",
-                 maxSpeed:80, accel:44, turn:2.7, grip:2.6, brake:60, coast:15,
+                 maxSpeed:80, accel:44, turn:2.7, grip:2.6, brake:60, coast:15, cDrag:91, cBrake:74,
                  nitroMult:0.95, nitroDur:2.2, nitroRegen:0.32, color:0xff3b30,
                  bars:{極速:8,加速:10,轉向:10,抓地:4} },
         super: { key:"super", name:"Super Car", role:"穩・快・貼地",
-                 maxSpeed:97, accel:33, turn:1.85, grip:8.5, brake:46, coast:9,
+                 maxSpeed:97, accel:33, turn:1.85, grip:8.5, brake:46, coast:9, cDrag:80, cBrake:78,
                  nitroMult:0.7, nitroDur:4.0, nitroRegen:0.22, color:0xffcf1f,
                  bars:{極速:10,加速:8,轉向:6,抓地:9} },
         truck: { key:"truck", name:"Truck", role:"重・慢・慣性強",
-                 maxSpeed:50, accel:15, turn:1.15, grip:4.5, brake:24, coast:4.5,
+                 maxSpeed:50, accel:15, turn:1.15, grip:4.5, brake:24, coast:4.5, cDrag:42, cBrake:55,
                  nitroMult:0.5, nitroDur:3.0, nitroRegen:0.25, color:0x3a86d8,
                  bars:{極速:5,加速:4,轉向:4,抓地:6} }
       };
@@ -362,14 +363,16 @@
 
       // ====================== 賽道（橢圓 + S 彎）======================
       function buildTrack() {
-        // 控制點（已放大約5倍，座標範圍約 ±600）：右側長直線 + 上緣連續彎 + 左側 sweeper + 底部 S 彎
+        // 控制點：法國勒芒賽道 Circuit de la Sarthe（依官方路線圖描點，等比例縮放到與原賽道同長度 ≈ 3885）
+        // 起跑線在主直線（cp[0]）；起點後左轉上行 → Dunlop 曲 → 上緣長邊 → 右側下行 → 底部連續彎回主直線。
         var cp = [
-          [600, 200], [600, 40], [600, -120], [600, -300],          // ← 右側長直線（全油門+氮氣衝刺段），起跑線在此
-          [560, -410], [440, -480], [250, -510], [30, -500], [-190, -470], [-390, -400], // 上緣連續彎
-          [-525, -255], [-610, -60], [-620, 150], [-560, 330],      // 左側大 sweeper
-          [-430, 450], [-250, 485],                                 // 底-左 進彎
-          [-120, 470], [-15, 405], [95, 500], [210, 430], [350, 475], // ← 底部 S 彎（保留特色）
-          [475, 435], [565, 305]                                    // 底-右 回到長直線
+          [-355, -290], [-458, -307], [-545, -298], [-606, -259], [-646, -198], [-676, -136],
+          [-705, -75], [-733, -14], [-751, 12], [-747, 67], [-716, 117], [-659, 152],
+          [-574, 174], [-458, 192], [-318, 211], [-164, 240], [6, 297], [177, 358],
+          [308, 411], [461, 441], [614, 454], [741, 452], [827, 424], [807, 332],
+          [755, 231], [695, 135], [636, 43], [584, -23], [536, -62], [525, -108],
+          [534, -150], [485, -187], [413, -213], [334, -233], [251, -250], [168, -268],
+          [83, -259], [-3, -277], [-86, -266], [-169, -281], [-252, -290], [-322, -301]
         ];
         var pts = cp.map(function (p) { return new THREE.Vector3(p[0], 0, p[1]); });
         var curve = new THREE.CatmullRomCurve3(pts, true, "catmullrom", 0.5);
@@ -784,26 +787,29 @@
       // ====================== 物理更新（玩家）======================
       function updatePlayer(dt) {
         var c = player.cfg;
-        var effMax = c.maxSpeed * (player.onGrass ? 0.55 : 1);
-        if (player.cfg.key === "truck" && truckBoost) effMax = CARS.super.maxSpeed * (player.onGrass ? 0.55 : 1);
+        // 一般極速 vMax（不開氮氣的引擎平衡點；貨車按 J 突破時拉到跑車級）；草地會降速
+        var vMax = (player.cfg.key === "truck" && truckBoost ? CARS.super.maxSpeed : c.maxSpeed) * (player.onGrass ? 0.55 : 1);
 
         var throttle = down("w", "arrowup");
         var braking = down("s", "arrowdown");
+        var brakeKey = !!keys["space"];                  // 修改四：空白鍵主動煞車
         var steer = (down("d", "arrowright") ? 1 : 0) - (down("a", "arrowleft") ? 1 : 0);
 
-        // 氮氣
-        var nitroOn = !!(keys["k"] && player.nitro > 0.02 && throttle);
-        if (nitroOn) {
-          player.nitro = Math.max(0, player.nitro - dt / c.nitroDur);
-          effMax += c.maxSpeed * c.nitroMult;
-        } else {
-          player.nitro = Math.min(1, player.nitro + dt * c.nitroRegen);
-        }
+        // 氮氣（煞車時不觸發）
+        var nitroOn = !!(keys["k"] && player.nitro > 0.02 && throttle && !brakeKey);
+        if (nitroOn) player.nitro = Math.max(0, player.nitro - dt / c.nitroDur);
+        else player.nitro = Math.min(1, player.nitro + dt * c.nitroRegen);
+        var engineCap = nitroOn ? vMax + c.maxSpeed * c.nitroMult : vMax;   // 氮氣時引擎上限拉高
 
-        // 加速 / 煞車 / 慣性摩擦
-        var accel = c.accel * (player.onGrass ? 0.6 : 1) * (nitroOn ? (1 + c.nitroMult) : 1);
-        if (throttle) player.vf += accel * dt;
-        else if (braking) {
+        // 速度更新（優先序：空白鍵煞車 > 油門 > S 煞車/倒車 > 滑行）
+        if (brakeKey) {                                  // 修改四：主動煞車到接近靜止
+          player.vf -= c.cBrake * dt;
+          if (player.vf < 0) player.vf = 0;
+        } else if (throttle) {
+          var accel = c.accel * (player.onGrass ? 0.6 : 1) * (nitroOn ? (1 + c.nitroMult) : 1);
+          // 油門只能推到 engineCap；若已超速（剛退氮氣）則不被油門硬拉回，交給下方阻力降速
+          player.vf = Math.min(player.vf + accel * dt, Math.max(engineCap, player.vf));
+        } else if (braking) {
           if (player.vf > 0) player.vf -= c.brake * dt;
           else player.vf -= c.accel * 0.45 * dt;          // 倒車較慢
         } else {
@@ -811,7 +817,15 @@
           if (player.vf > 0) player.vf = Math.max(0, player.vf - fr);
           else if (player.vf < 0) player.vf = Math.min(0, player.vf + fr);
         }
-        player.vf = Math.max(-effMax * 0.3, Math.min(effMax, player.vf));
+
+        // 修改三：氮氣結束後「真實空氣阻力降速」（阻力 ∝ 速度²，引擎在 vMax 達平衡）。
+        // 只在沒煞車、沒氮氣、且超速時作用；平順趨近 vMax、不會更低。煞車優先（不疊加阻力）。
+        if (!brakeKey && !nitroOn && player.vf > vMax) {
+          var dragDecel = c.cDrag * (player.vf * player.vf - vMax * vMax) / (vMax * vMax);
+          player.vf -= dragDecel * dt;
+          if (player.vf < vMax) player.vf = vMax;
+        }
+        if (player.vf < -vMax * 0.3) player.vf = -vMax * 0.3;   // 倒車下限
 
         // 轉向（A 左 / D 右；低速轉不動、倒車方向反轉）
         var spd = player.vf;

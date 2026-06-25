@@ -3,9 +3,75 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ROK 後台管理系統 | ROK Tech</title>
+    <title>ROK 企業 ERP 後台 | ROK Tech</title>
     <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="assets/css/styles.css?v=20260624">
+    <style>
+      /* ===== 企業 ERP 後台版面（側邊欄 + 主內容；沿用站台深色系，與 .sys-* 既有元件並用）===== */
+      .erp-layout { display: flex; min-height: calc(100vh - 0px); gap: 0; align-items: stretch; }
+      .erp-sidebar { flex: 0 0 232px; width: 232px; background: #11141b; border-right: 1px solid rgba(255,255,255,0.08);
+        padding: 14px 10px 28px; overflow-y: auto; max-height: calc(100vh - 64px); position: sticky; top: 64px; }
+      .erp-main { flex: 1 1 auto; min-width: 0; padding: 22px 24px 60px; }
+      .erp-group { margin-bottom: 6px; }
+      .erp-group-title { display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+        font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.42);
+        padding: 10px 10px 6px; user-select: none; }
+      .erp-group-title::after { content: "▾"; font-size: 0.7rem; transition: transform 0.2s; }
+      .erp-group.collapsed .erp-group-title::after { transform: rotate(-90deg); }
+      .erp-group.collapsed .erp-nav-item { display: none; }
+      .erp-nav-item { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; cursor: pointer;
+        background: transparent; border: 0; color: rgba(255,255,255,0.82); font-size: 0.9rem; font-weight: 650;
+        padding: 9px 11px; border-radius: 9px; margin: 1px 0; border-left: 3px solid transparent; }
+      .erp-nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+      .erp-nav-item.is-active { background: rgba(184,134,11,0.16); color: #ffd45e; border-left-color: #c89b3c; }
+      .erp-nav-item .ic { width: 18px; text-align: center; opacity: 0.9; }
+
+      .erp-burger { display: none; background: transparent; border: 1px solid rgba(255,255,255,0.22);
+        color: #fff; border-radius: 8px; width: 40px; height: 40px; font-size: 1.2rem; cursor: pointer; }
+
+      .erp-page-head { margin: 0 0 16px; }
+      .erp-page-head h2 { margin: 0; font-size: 1.5rem; }
+      .erp-sub { color: rgba(255,255,255,0.55); font-size: 0.85rem; margin: 4px 0 0; }
+      .erp-kpi { margin-bottom: 18px; }
+      .erp-kpi-6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+      .erp-ops { white-space: nowrap; display: flex; gap: 6px; }
+
+      /* 儀表板卡片 + 簡易圖表（純 CSS，無外部圖表庫） */
+      .erp-dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .erp-card { background: #181b22; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px 18px; }
+      .erp-card h3 { margin: 0 0 12px; font-size: 1rem; }
+      .erp-card-wide { grid-column: 1 / -1; }
+      .erp-bar-row { display: grid; grid-template-columns: 120px 1fr 48px; align-items: center; gap: 10px; margin: 7px 0; font-size: 0.85rem; }
+      .erp-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgba(255,255,255,0.85); }
+      .erp-bar { background: rgba(255,255,255,0.08); border-radius: 999px; height: 12px; overflow: hidden; }
+      .erp-bar i { display: block; height: 100%; background: linear-gradient(90deg, #b8860b, #ffd45e); border-radius: 999px; }
+      .erp-bar-val { text-align: right; font-variant-numeric: tabular-nums; color: rgba(255,255,255,0.7); }
+      .erp-trend { display: flex; align-items: flex-end; gap: 10px; height: 150px; padding-top: 8px; }
+      .erp-trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 6px; }
+      .erp-trend-bar { width: 70%; min-height: 4px; background: linear-gradient(180deg, #ffd45e, #b8860b); border-radius: 6px 6px 0 0; }
+      .erp-trend-x { font-size: 0.72rem; color: rgba(255,255,255,0.5); }
+
+      .erp-report-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+      .erp-report-card { background: #181b22; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px 18px; }
+      .erp-report-card h3 { margin: 0 0 4px; font-size: 1.02rem; }
+      .erp-report-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+      .erp-main textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.16);
+        color: #fff; border-radius: 8px; padding: 8px 10px; font: inherit; }
+
+      @media (max-width: 920px) {
+        .erp-kpi-6 { grid-template-columns: repeat(3, 1fr); }
+        .erp-dash-grid { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 760px) {
+        .erp-burger { display: inline-flex; align-items: center; justify-content: center; }
+        .erp-sidebar { position: fixed; top: 0; left: 0; bottom: 0; max-height: none; z-index: 60; width: 240px;
+          transform: translateX(-100%); transition: transform 0.25s ease; padding-top: 70px; }
+        .erp-layout.nav-open .erp-sidebar { transform: translateX(0); box-shadow: 0 0 40px rgba(0,0,0,0.6); }
+        .erp-kpi-6 { grid-template-columns: 1fr 1fr; }
+        .erp-main { padding: 16px 14px 50px; }
+      }
+    </style>
   </head>
   <body class="admin-body">
     <main class="admin-shell system-shell">
@@ -18,7 +84,7 @@
         <div>
           <p class="eyebrow">Back Office</p>
           <h1>後台管理系統登入</h1>
-          <p>訂單管理、產品進銷資料庫、人事管理三合一。此頁與前台分開，公開網站不會出現入口。</p>
+          <p>企業級 ERP 後台：訂單、出貨、庫存、採購、人資、財務、報表一站整合。此頁與前台分開，公開網站不會出現入口。</p>
         </div>
         <form data-admin-login>
           <label>系統密碼
@@ -33,9 +99,10 @@
       <!-- 系統主畫面 -->
       <section class="admin-dashboard system-dashboard" data-admin-dashboard hidden>
         <header class="sys-appbar">
+          <button class="erp-burger" type="button" data-erp-burger aria-label="選單">☰</button>
           <a class="brand" href="index.html">
             <span class="brand-mark">ROK</span>
-            <span class="sys-title"><strong>ROK 後台管理系統</strong><span>Order ・ Inventory ・ HR</span></span>
+            <span class="sys-title"><strong>ROK 企業 ERP 後台</strong><span>Enterprise Resource Planning</span></span>
           </a>
           <div class="admin-actions">
             <a class="btn ghost" href="index.html">回前台</a>
@@ -43,104 +110,169 @@
           </div>
         </header>
 
-        <!-- 分頁切換 -->
-        <nav class="sys-tabs" role="tablist" aria-label="系統模組">
-          <button class="sys-tab is-active" type="button" data-tab="orders" role="tab">訂單管理</button>
-          <button class="sys-tab" type="button" data-tab="inventory" role="tab">產品進銷資料庫</button>
-          <button class="sys-tab" type="button" data-tab="employees" role="tab">人事管理系統</button>
-        </nav>
+        <div class="erp-layout">
+          <!-- ===== 側邊欄分類導覽（7 大類）===== -->
+          <aside class="erp-sidebar">
+            <div class="erp-group">
+              <div class="erp-group-title">總覽</div>
+              <button class="erp-nav-item" data-nav="dashboard"><span class="ic">▦</span>營運儀表板</button>
+            </div>
+            <div class="erp-group">
+              <div class="erp-group-title">銷售與出貨</div>
+              <button class="erp-nav-item" data-nav="orders"><span class="ic">🧾</span>訂單管理</button>
+              <button class="erp-nav-item" data-nav="shipping"><span class="ic">🚚</span>出貨／物流管理</button>
+            </div>
+            <div class="erp-group">
+              <div class="erp-group-title">商品與庫存</div>
+              <button class="erp-nav-item" data-nav="inventory"><span class="ic">⌨</span>產品進銷資料庫</button>
+              <button class="erp-nav-item" data-nav="stock-alert"><span class="ic">⚠</span>庫存警示／倉儲</button>
+            </div>
+            <div class="erp-group">
+              <div class="erp-group-title">採購與供應商</div>
+              <button class="erp-nav-item" data-nav="suppliers"><span class="ic">🏭</span>供應商管理</button>
+              <button class="erp-nav-item" data-nav="purchases"><span class="ic">📦</span>採購管理</button>
+            </div>
+            <div class="erp-group">
+              <div class="erp-group-title">人力資源</div>
+              <button class="erp-nav-item" data-nav="employees"><span class="ic">👤</span>員工資料</button>
+              <button class="erp-nav-item" data-nav="attendance"><span class="ic">🕘</span>出勤管理</button>
+              <button class="erp-nav-item" data-nav="leaves"><span class="ic">📝</span>請假管理</button>
+              <button class="erp-nav-item" data-nav="payroll"><span class="ic">💰</span>薪資管理</button>
+            </div>
+            <div class="erp-group">
+              <div class="erp-group-title">財務</div>
+              <button class="erp-nav-item" data-nav="finance"><span class="ic">📊</span>財務管理</button>
+            </div>
+            <div class="erp-group">
+              <div class="erp-group-title">報表與文件</div>
+              <button class="erp-nav-item" data-nav="reports"><span class="ic">📈</span>報表分析</button>
+              <button class="erp-nav-item" data-nav="documents"><span class="ic">📁</span>文件／合約管理</button>
+            </div>
+          </aside>
 
-        <!-- ===== 分頁① 訂單管理（沿用 app.js 既有 hooks 與邏輯）===== -->
-        <section class="sys-panel" data-panel="orders" role="tabpanel">
-          <div class="sys-toolbar">
-            <span class="sys-sync-time" data-sync-time>尚未同步</span>
-            <span class="spacer"></span>
-            <button class="btn accent" type="button" data-refresh-orders>
-              <svg class="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M21 12a9 9 0 1 1-2.64-6.36"></path><polyline points="21 3 21 9 15 9"></polyline>
-              </svg>
-              重新整理訂單
-            </button>
-            <button class="btn excel" type="button" data-export-excel>
-              <svg class="excel-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line>
-              </svg>
-              匯出 Excel
-            </button>
-            <button class="btn danger" type="button" data-clear-orders>清除所有訂單</button>
-          </div>
+          <!-- ===== 主內容區 ===== -->
+          <main class="erp-main">
+            <!-- 既有 3 模組的分頁鈕：保留給 system.js 驅動（隱藏，由側邊欄以程式觸發）-->
+            <nav class="sys-tabs" role="tablist" aria-label="系統模組" hidden>
+              <button class="sys-tab is-active" type="button" data-tab="orders" role="tab">訂單管理</button>
+              <button class="sys-tab" type="button" data-tab="inventory" role="tab">產品進銷資料庫</button>
+              <button class="sys-tab" type="button" data-tab="employees" role="tab">人事管理系統</button>
+            </nav>
 
-          <section class="order-stats" data-order-stats></section>
+            <!-- 〔新增〕營運儀表板（erp.js 填入）-->
+            <section class="sys-panel" data-panel="dashboard" role="tabpanel" hidden></section>
 
-          <section class="admin-controls">
-            <label>搜尋訂單
-              <input data-order-search type="search" placeholder="訂單編號、姓名、Email、商品">
-            </label>
-            <label>狀態篩選
-              <select data-order-status-filter>
-                <option>全部</option><option>新訂單</option><option>處理中</option><option>已出貨</option><option>已完成</option><option>已取消</option>
-              </select>
-            </label>
-          </section>
+            <!-- ===== 分頁① 訂單管理（沿用 app.js 既有 hooks 與邏輯，完整保留）===== -->
+            <section class="sys-panel" data-panel="orders" role="tabpanel">
+              <div class="sys-toolbar">
+                <span class="sys-sync-time" data-sync-time>尚未同步</span>
+                <span class="spacer"></span>
+                <button class="btn accent" type="button" data-refresh-orders>
+                  <svg class="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 12a9 9 0 1 1-2.64-6.36"></path><polyline points="21 3 21 9 15 9"></polyline>
+                  </svg>
+                  重新整理訂單
+                </button>
+                <button class="btn excel" type="button" data-export-excel>
+                  <svg class="excel-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line>
+                  </svg>
+                  匯出 Excel
+                </button>
+                <button class="btn danger" type="button" data-clear-orders>清除所有訂單</button>
+              </div>
 
-          <section class="admin-order-layout">
-            <div class="admin-order-list" data-admin-orders></div>
-            <div data-order-detail></div>
-          </section>
-        </section>
+              <section class="order-stats" data-order-stats></section>
 
-        <!-- ===== 分頁② 產品進銷資料庫（key: rokInventory）===== -->
-        <section class="sys-panel" data-panel="inventory" role="tabpanel" hidden>
-          <div class="sys-summary" data-inv-summary></div>
+              <section class="admin-controls">
+                <label>搜尋訂單
+                  <input data-order-search type="search" placeholder="訂單編號、姓名、Email、商品">
+                </label>
+                <label>狀態篩選
+                  <select data-order-status-filter>
+                    <option>全部</option><option>新訂單</option><option>處理中</option><option>已出貨</option><option>已完成</option><option>已取消</option>
+                  </select>
+                </label>
+              </section>
 
-          <div class="sys-toolbar">
-            <label class="grow">搜尋
-              <input data-inv-search type="search" placeholder="產品、顏色、軸體">
-            </label>
-            <label class="grow">產品篩選
-              <select data-inv-filter><option value="">全部產品</option></select>
-            </label>
-            <span class="spacer"></span>
-            <span class="sys-sync-time" data-inv-sync-time>尚未同步</span>
-            <button class="btn accent tiny" type="button" data-inv-refresh>重新整理</button>
-            <button class="btn primary tiny" type="button" data-inv-add>＋ 新增存貨</button>
-            <button class="btn excel tiny" type="button" data-inv-export>匯出 Excel</button>
-            <button class="btn danger tiny" type="button" data-inv-reset>重置庫存</button>
-          </div>
+              <section class="admin-order-layout">
+                <div class="admin-order-list" data-admin-orders></div>
+                <div data-order-detail></div>
+              </section>
+            </section>
 
-          <div class="sys-table-wrap">
-            <table class="sys-table">
-              <thead>
-                <tr><th>產品名稱</th><th>顏色</th><th>軸體 / 規格</th><th>目前庫存</th><th>已售出</th><th>狀態</th></tr>
-              </thead>
-              <tbody data-inv-body></tbody>
-            </table>
-          </div>
-        </section>
+            <!-- 〔新增〕出貨／物流管理 -->
+            <section class="sys-panel" data-panel="shipping" role="tabpanel" hidden></section>
 
-        <!-- ===== 分頁③ 人事管理系統（key: rokEmployees）===== -->
-        <section class="sys-panel" data-panel="employees" role="tabpanel" hidden>
-          <div class="sys-summary" data-emp-summary></div>
+            <!-- ===== 分頁② 產品進銷資料庫（key: rokInventory，完整保留）===== -->
+            <section class="sys-panel" data-panel="inventory" role="tabpanel" hidden>
+              <div class="sys-summary" data-inv-summary></div>
 
-          <div class="sys-toolbar">
-            <span class="spacer"></span>
-            <button class="btn primary tiny" type="button" data-emp-add>＋ 新增員工</button>
-            <button class="btn excel tiny" type="button" data-emp-export>匯出 Excel</button>
-          </div>
+              <div class="sys-toolbar">
+                <label class="grow">搜尋
+                  <input data-inv-search type="search" placeholder="產品、顏色、軸體">
+                </label>
+                <label class="grow">產品篩選
+                  <select data-inv-filter><option value="">全部產品</option></select>
+                </label>
+                <span class="spacer"></span>
+                <span class="sys-sync-time" data-inv-sync-time>尚未同步</span>
+                <button class="btn accent tiny" type="button" data-inv-refresh>重新整理</button>
+                <button class="btn primary tiny" type="button" data-inv-add>＋ 新增存貨</button>
+                <button class="btn excel tiny" type="button" data-inv-export>匯出 Excel</button>
+                <button class="btn danger tiny" type="button" data-inv-reset>重置庫存</button>
+              </div>
 
-          <div class="sys-table-wrap">
-            <table class="sys-table">
-              <thead>
-                <tr><th>員工編號</th><th>姓名</th><th>性別</th><th>職位</th><th>部門</th><th>薪資</th><th>入職日期</th><th>電話</th><th>住家地址</th><th>身分</th><th>資料狀態</th><th>操作</th></tr>
-              </thead>
-              <tbody data-emp-body></tbody>
-            </table>
-          </div>
-        </section>
+              <div class="sys-table-wrap">
+                <table class="sys-table">
+                  <thead>
+                    <tr><th>產品名稱</th><th>顏色</th><th>軸體 / 規格</th><th>目前庫存</th><th>已售出</th><th>狀態</th></tr>
+                  </thead>
+                  <tbody data-inv-body></tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- 〔新增〕庫存警示／倉儲 -->
+            <section class="sys-panel" data-panel="stock-alert" role="tabpanel" hidden></section>
+            <!-- 〔新增〕供應商管理 -->
+            <section class="sys-panel" data-panel="suppliers" role="tabpanel" hidden></section>
+            <!-- 〔新增〕採購管理 -->
+            <section class="sys-panel" data-panel="purchases" role="tabpanel" hidden></section>
+
+            <!-- ===== 分頁③ 人事管理系統（key: rokEmployees，完整保留）===== -->
+            <section class="sys-panel" data-panel="employees" role="tabpanel" hidden>
+              <div class="sys-summary" data-emp-summary></div>
+
+              <div class="sys-toolbar">
+                <span class="spacer"></span>
+                <button class="btn primary tiny" type="button" data-emp-add>＋ 新增員工</button>
+                <button class="btn excel tiny" type="button" data-emp-export>匯出 Excel</button>
+              </div>
+
+              <div class="sys-table-wrap">
+                <table class="sys-table">
+                  <thead>
+                    <tr><th>員工編號</th><th>姓名</th><th>性別</th><th>職位</th><th>部門</th><th>薪資</th><th>入職日期</th><th>電話</th><th>住家地址</th><th>身分</th><th>資料狀態</th><th>操作</th></tr>
+                  </thead>
+                  <tbody data-emp-body></tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- 〔新增〕出勤 / 請假 / 薪資 / 財務 / 報表 / 文件 -->
+            <section class="sys-panel" data-panel="attendance" role="tabpanel" hidden></section>
+            <section class="sys-panel" data-panel="leaves" role="tabpanel" hidden></section>
+            <section class="sys-panel" data-panel="payroll" role="tabpanel" hidden></section>
+            <section class="sys-panel" data-panel="finance" role="tabpanel" hidden></section>
+            <section class="sys-panel" data-panel="reports" role="tabpanel" hidden></section>
+            <section class="sys-panel" data-panel="documents" role="tabpanel" hidden></section>
+          </main>
+        </div>
       </section>
     </main>
 
-    <!-- ===== 新增存貨 Modal ===== -->
+    <!-- ===== 新增存貨 Modal（保留）===== -->
     <div class="sys-modal" data-modal-add-stock hidden>
       <div class="sys-modal-overlay" data-close-modal></div>
       <div class="sys-modal-card">
@@ -161,7 +293,7 @@
       </div>
     </div>
 
-    <!-- ===== 新增員工 Modal ===== -->
+    <!-- ===== 新增員工 Modal（保留）===== -->
     <div class="sys-modal" data-modal-add-employee hidden>
       <div class="sys-modal-overlay" data-close-modal></div>
       <div class="sys-modal-card">
@@ -187,7 +319,7 @@
       </div>
     </div>
 
-    <!-- ===== 通用確認 Modal ===== -->
+    <!-- ===== 通用確認 Modal（system.js 用，保留）===== -->
     <div class="sys-modal" data-modal-confirm hidden>
       <div class="sys-modal-overlay" data-close-confirm></div>
       <div class="sys-modal-card">
@@ -202,12 +334,46 @@
       </div>
     </div>
 
+    <!-- ===== ERP 通用表單 Modal（erp.js 用，動態欄位）===== -->
+    <div class="sys-modal" data-erp-modal hidden>
+      <div class="sys-modal-overlay" data-erp-close></div>
+      <div class="sys-modal-card">
+        <div class="sys-modal-head">
+          <div><h3 data-erp-title>編輯</h3></div>
+          <button class="sys-modal-close" type="button" data-erp-close aria-label="關閉">×</button>
+        </div>
+        <form class="sys-form two" data-erp-form>
+          <div data-erp-fields style="display:contents"></div>
+          <div class="sys-modal-actions full">
+            <button type="button" class="btn ghost" data-erp-close>取消</button>
+            <button type="submit" class="btn primary">儲存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== ERP 確認 Modal（erp.js 用）===== -->
+    <div class="sys-modal" data-erp-confirm hidden>
+      <div class="sys-modal-overlay" data-erpc-close></div>
+      <div class="sys-modal-card">
+        <div class="sys-modal-head">
+          <div><h3 data-erpc-title>確認</h3><p data-erpc-text></p></div>
+          <button class="sys-modal-close" type="button" data-erpc-close aria-label="關閉">×</button>
+        </div>
+        <div class="sys-modal-actions">
+          <button type="button" class="btn ghost" data-erpc-close>取消</button>
+          <button type="button" class="btn danger" data-erpc-ok>確定</button>
+        </div>
+      </div>
+    </div>
+
     <div class="sys-toast-wrap" data-toast-wrap></div>
 
-    <!-- SheetJS（支援樣式的相容版 xlsx-js-style，同 XLSX API）：三個分頁的匯出共用，可套用粗體標題 -->
+    <!-- SheetJS（xlsx-js-style，支援樣式）：訂單/庫存/員工/ERP 各模組匯出共用 -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <script src="assets/js/data.js?v=20260624"></script>
     <script src="assets/js/app.js?v=20260624"></script>
     <script src="assets/js/system.js?v=20260624"></script>
+    <script src="assets/js/erp.js?v=20260625"></script>
   </body>
 </html>
