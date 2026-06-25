@@ -206,6 +206,7 @@
           <div>
             <h2 style="margin-top:0;">② 圈數模式</h2>
             <div class="seg" id="segLaps">
+              <button data-laps="2">固定 2 圈</button>
               <button data-laps="3" class="sel">固定 3 圈</button>
               <button data-laps="0">無限圈・計時挑戰</button>
             </div>
@@ -274,15 +275,15 @@
       // maxSpeed 極速 / accel 加速度 / turn 轉向 / grip 抓地(越大越不滑) /
       // brake 煞車力 / coast 鬆油摩擦(越小滑越遠=慣性大) / nitroMult 氮氣推力 / nitroDur 氮氣秒數
       var CARS = {
-        bike:  { key:"bike",  name:"MotoGP 重機", role:"輕・靈・刺激難控",
+        bike:  { key:"bike",  name:"Motorcycle", role:"輕・靈・刺激難控",
                  maxSpeed:80, accel:44, turn:2.7, grip:2.6, brake:60, coast:15,
                  nitroMult:0.95, nitroDur:2.2, nitroRegen:0.32, color:0xff3b30,
                  bars:{極速:8,加速:10,轉向:10,抓地:4} },
-        super: { key:"super", name:"藍寶堅尼跑車", role:"穩・快・貼地",
+        super: { key:"super", name:"Super Car", role:"穩・快・貼地",
                  maxSpeed:97, accel:33, turn:1.85, grip:8.5, brake:46, coast:9,
                  nitroMult:0.7, nitroDur:4.0, nitroRegen:0.22, color:0xffcf1f,
                  bars:{極速:10,加速:8,轉向:6,抓地:9} },
-        truck: { key:"truck", name:"貨車", role:"重・慢・慣性強",
+        truck: { key:"truck", name:"Truck", role:"重・慢・慣性強",
                  maxSpeed:50, accel:15, turn:1.15, grip:4.5, brake:24, coast:4.5,
                  nitroMult:0.5, nitroDur:3.0, nitroRegen:0.25, color:0x3a86d8,
                  bars:{極速:5,加速:4,轉向:4,抓地:6} }
@@ -734,7 +735,7 @@
           ai.push({
             cfg: ac, mesh: am, name: aiNames[i],
             prog: (N - 6 - i * 4) / N,            // 起跑排在玩家後方
-            lap: 0, lane: (i - 1) * 5.5,
+            lap: -1, lane: (i - 1) * 5.5,   // 從 -1 起算：AI 起跑在起跑線「後方」(prog≈0.99)，基準才會與玩家(在線上,total 0)一致，名次不會卡在最後
             speed: 0, base: 60 + i * 6 + (ac.maxSpeed - 50) * 0.25
           });
         }
